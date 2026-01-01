@@ -1,4 +1,4 @@
-# Monorepo Example (20+ yr stack)
+# Monorepo 
 
 This repository demonstrates a professional monorepo layout using:
 
