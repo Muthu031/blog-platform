@@ -1,6 +1,7 @@
 import express from 'express'
 import routes from './api/routes'
 import { errorHandler } from './api/middlewares/errorHandler'
+import { logger } from './api/middlewares/logger'
 import dotenv from 'dotenv'
 import cors from 'cors'
 dotenv.config()
@@ -10,10 +11,11 @@ const app: express.Express = express()
 app.use(express.json())
 app.use(
   cors({
-    origin: ['http://localhost:8080', '*'],
+    origin: ['http://localhost:8080'],
     credentials: true,
   })
 );
+app.use(logger)
 app.use('/api', routes)
 app.use(errorHandler)
 
