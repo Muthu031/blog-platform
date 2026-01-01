@@ -24,11 +24,15 @@
     "start:all": "pnpm -w -r run start",
     "build:all": "pnpm -w -r run build",
     "dev:debug": "pnpm -w -r --parallel -F @myorg/api run dev:debug -F @myorg/web run dev",
-    "debug": "pnpm run dev:debug"
+    "debug": "pnpm run dev:debug",
+    "open:chrome-debug": "node ./scripts/start-chrome-debug.js http://localhost:8080 9222",
+    "open:chrome-debug-wait": "pnpm dlx wait-on http://localhost:8080 && pnpm run open:chrome-debug",
+    "debug:full": "concurrently --kill-others-on-fail \"pnpm -C apps/api run dev:debug\" \"pnpm -C apps/web run dev\" \"pnpm run open:chrome-debug-wait\""
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@vitejs/plugin-react": "^5.1.2",
-    "ts-node": "^10.9.1"
+    "ts-node": "^10.9.1",
+    "concurrently": "^8.2.0"
   }
 }

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "dev:debug": "vite --port 8080 --open",
     "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx",

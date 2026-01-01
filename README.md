@@ -69,8 +69,11 @@ Useful commands
 - Start API in dev: `pnpm -w -F @myorg/api dev`
 - Start Web in dev: `pnpm -w -F @myorg/web dev`
 - Debug both (API + Web):
-  1. Start both servers from the repo root (API starts with the Node inspector on 9229): `pnpm run debug`
-  2. In VS Code run the **Debug Web + API** configuration (this will attach to the API and launch Chrome for the web app). The API debugger attaches to port 9229; the Chrome launcher uses a remote-debugging port for browser-side breakpoints.
+  1. Single-command (recommended): `pnpm run debug:full` — starts API (inspector on 9229), starts the web dev server, and launches Chrome with remote debugging on 9222.
+  2. Alternative manual flow:
+     - `pnpm run debug` to start both servers (API + web)
+     - `pnpm run open:chrome-debug` to launch Chrome with remote debugging
+  3. In VS Code run the **Debug Web + API** configuration (this will attach to the API and open Chrome for the web app). The API debugger attaches to port 9229; the Chrome launcher uses a remote-debugging port for browser-side breakpoints.
 - Run Prisma migrations: `pnpm -w -F @myorg/api prisma:migrate:dev`
 
 Notes
