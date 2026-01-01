@@ -4,6 +4,18 @@ import path from 'path';
 
 const logsDir = process.env.LOGS_DIR ? path.resolve(process.env.LOGS_DIR) : path.join(process.cwd(), 'logs');
 
+/**
+ * Logger middleware function.
+ *
+ * Logs the request and response data to a file
+ * in the `logs` directory.
+ *
+ * Logs the request headers in a table format.
+ *
+ * @param {Request} req - The Express request object
+ * @param {Response} res - The Express response object
+ * @param {NextFunction} next - The next middleware function
+ */
 export const logger = (req: Request, res: Response, next: NextFunction) => {
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
