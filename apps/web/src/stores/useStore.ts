@@ -1,27 +1,50 @@
-import create from 'zustand'
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
-type State = {
-  name: string
-  setName: (n: string) => void
-  isAuthenticated: boolean
-  token: string | null
-  login: (token: string) => void
-  logout: () => void
+// Types
+interface UserState {
+  name: string;
+  setName: (name: string) => void;
 }
 
-const useStore = create<State>((set) => ({
+interface AuthState {
+  isAuthenticated: boolean;
+  token: string | null;
+  login: (token: string) => void;
+  logout: () => void;
+}
+
+type StoreState = UserState & AuthState;
+
+// Slices
+const createUserSlice = (set: any): UserState => ({
   name: 'Muthu',
-  setName: (n) => set({ name: n }),
-  isAuthenticated: !!localStorage.getItem('token'),
-  token: localStorage.getItem('token'),
-  login: (token) => {
-    localStorage.setItem('token', token);
+  setName: (name: string) => set({ name }),
+});
+
+const createAuthSlice = (set: any): AuthState => ({
+  isAuthenticated: false,
+  token: null,
+  login: (token: string) => {
     set({ isAuthenticated: true, token });
   },
   logout: () => {
-    localStorage.removeItem('token');
     set({ isAuthenticated: false, token: null });
   },
-}))
+});
 
-export default useStore
+// Combined store with persistence for auth
+const useStore = create<StoreState>()(
+  persist(
+    (set) => ({
+      ...createUserSlice(set),
+      ...createAuthSlice(set),
+    }),
+    {
+      name: 'app-storage',
+      partialize: (state) => ({ token: state.token, isAuthenticated: state.isAuthenticated }),
+    }
+  )
+);
+
+export default useStore;
