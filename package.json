@@ -8,6 +8,11 @@
     "tooling/*"
   ],
   "scripts": {
+    "setup": "pnpm install --no-frozen-lockfile",
+    "bootstrap": "pnpm install --no-frozen-lockfile",
+    "refresh-deps": "pnpm -w update && pnpm install",
+    "update-browserslist-db": "pnpm dlx browserslist@latest --update-db",
+    "recreate-lockfile": "node scripts/recreate-lockfile.js",
     "dev:all": "pnpm -w -r --parallel -F @myorg/api -F @myorg/web run dev",
     "dev:web": "pnpm -w -F @myorg/web run dev",
     "dev:api": "pnpm -w -F @myorg/api run dev",
