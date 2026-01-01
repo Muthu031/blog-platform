@@ -22,7 +22,9 @@
     "distribute-env:dev:fail": "pnpm run distribute-env -- --env=development --targets=all --fail-missing=true",
     "distribute-env:prod:fail": "pnpm run distribute-env -- --env=production --targets=all --fail-missing=true",
     "start:all": "pnpm -w -r run start",
-    "build:all": "pnpm -w -r run build"
+    "build:all": "pnpm -w -r run build",
+    "dev:debug": "pnpm -w -r --parallel -F @myorg/api run dev:debug -F @myorg/web run dev",
+    "debug": "pnpm run dev:debug"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
