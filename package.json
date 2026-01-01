@@ -1,0 +1,27 @@
+{
+  "name": "my-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "tooling/*"
+  ],
+  "scripts": {
+    "dev:all": "pnpm -w -r --parallel -F @myorg/api -F @myorg/web run dev",
+    "dev:web": "pnpm -w -F @myorg/web run dev",
+    "dev:api": "pnpm -w -F @myorg/api run dev",
+    "distribute-env": "ts-node scripts/distribute-env.ts",
+    "distribute-env:dev": "pnpm run distribute-env -- --env=development --targets=all",
+    "distribute-env:prod": "pnpm run distribute-env -- --env=production --targets=all",
+    "distribute-env:dev:fail": "pnpm run distribute-env -- --env=development --targets=all --fail-missing=true",
+    "distribute-env:prod:fail": "pnpm run distribute-env -- --env=production --targets=all --fail-missing=true",
+    "start:all": "pnpm -w -r run start",
+    "build:all": "pnpm -w -r run build"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@vitejs/plugin-react": "^5.1.2",
+    "ts-node": "^10.9.1"
+  }
+}
