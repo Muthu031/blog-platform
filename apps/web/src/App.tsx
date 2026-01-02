@@ -1,4 +1,3 @@
-import React from 'react'
 import Home from './pages/Home'
 import Login from './components/Login'
 import useStore from './stores/useStore'

@@ -14,8 +14,17 @@ Quick steps to debug locally:
      ```
      This starts `ts-node-dev` under the Node inspector on port 9229.
    - Or launch directly from VS Code using the `Launch API (ts-node)` configuration.
-4. In VS Code, set breakpoints (e.g. in `src/api/controllers/auth.ts`) and either attach with the `Attach to API (ts-node-dev)` config or use `Launch API (ts-node)`.
-5. Test endpoints:
+4. For fast hot reload during development (no manual build):
+   - Recommended (already included):
+     ```bash
+     pnpm -w -F @myorg/api run dev:hot
+     ```
+   - Alternative (nodemon):
+     ```bash
+     pnpm -w -F @myorg/api run dev:nodemon
+     ```
+5. In VS Code, set breakpoints (e.g. in `src/api/controllers/auth.ts`) and either attach with the `Attach to API (ts-node-dev)` config or use `Launch API (ts-node)`.
+6. Test endpoints:
    ```bash
    curl -X POST http://localhost:8090/api/login -H "Content-Type: application/json" -d '{"email":"user@example.com","password":"password"}'
    ```

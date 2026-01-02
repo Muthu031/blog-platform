@@ -8,4 +8,4 @@ export const logUtils = (req:Request,res: Response,message:string) => {
           console.log(` ${message}`);
           console.log('================================');
         });
-}
+};
