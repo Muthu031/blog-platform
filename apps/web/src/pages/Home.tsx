@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { User } from '../types';
 
 // Sample blog posts
 const blogPosts = [
@@ -31,24 +32,43 @@ const blogPosts = [
   },
 ];
 
+
+
 export default function Home() {
   const { userId, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [msg, setMsg] = useState<string>('Loading...');
-  const [name, setName] = useState<string>('User');
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingUser, setLoadingUser] = useState<boolean>(true);
 
   useEffect(() => {
-    const fetchMessage = async () => {
-      try {
-        const response = await api.get<{ message: string }>('/hello');
-        setMsg(response?.data?.message);
-      } catch (error) {
-        setMsg('Failed to load message');
+    // const fetchMessage = async () => {
+    //   try {
+    //     const response = await api.get<{ message: string }>('/hello');
+    //     setMsg(response?.data?.message);
+    //   } catch (error) {
+    //     setMsg('Failed to load message');
+    //   }
+    // };
+
+    const fetchUser = async () => {
+      if (userId) {
+        try {
+          const response = await api.get<User>(`/users/${userId}`);
+          setUser(response.data);
+        } catch (error) {
+          console.error('Failed to fetch user details:', error);
+        } finally {
+          setLoadingUser(false);
+        }
+      } else {
+        setLoadingUser(false);
       }
     };
 
-    fetchMessage();
-  }, []);
+    // fetchMessage();
+    fetchUser();
+  }, [userId]);
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
@@ -57,7 +77,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Portfolio</h1>
           <div className="flex items-center space-x-4">
-            <span className="text-sm">Welcome {userId ? `User ${userId.slice(0, 8)}` : name}</span>
+            <span className="text-sm">Welcome {user ? user.name : loadingUser ? 'Loading...' : 'User'}</span>
             <button
               onClick={toggleTheme}
               className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
@@ -93,13 +113,7 @@ export default function Home() {
             Building future-ready applications and sharing insights through premium content that drives growth and innovation.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <input
-              className="border border-gray-300 dark:border-gray-700 px-4 py-2 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white max-w-xs"
-              placeholder="Your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <span className="text-sm text-gray-500 dark:text-gray-400 self-center">API Status: {msg}</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400 self-center">API Status: {user ? 'Active' : 'Inactive'}</span>
           </div>
         </div>
       </section>
