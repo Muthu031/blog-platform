@@ -1,13 +1,19 @@
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { eq } from 'drizzle-orm';
+import { eq, and, gt } from 'drizzle-orm';
 import { logUtils } from '../../utils/logUtils';
 import { errorHandler } from '../middlewares/errorHandler';
 import db from '../../services/db';
-import { users } from '../../database/tables/users';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  generateRefreshTokenJWT,
+  verifyRefreshTokenJWT,
+  TokenPayload
+} from '../../utils/auth';
+import { users } from '../../database/tables/users';
+import { refreshTokens } from '../../database/tables/refreshTokens';
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -15,20 +21,104 @@ export const login = async (req: Request, res: Response) => {
     return res.status(400).json({ message: 'Email and password are required' });
   }
   try {
-
-     const loggedInUser = await db.select().from(users).where(eq(users.email, email)).limit(1).then(rows => rows[0]);
-    if (loggedInUser) {
-      const passwordMatch = await bcrypt.compare(password, loggedInUser.passwordHash);
-      if (!passwordMatch) {
-        return res.status(401).json({ message: 'Invalid credentials' });
-      } 
+    const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (existingUser.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
-      const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: '30m' });
-      logUtils(req, res, `User ${email} logged in`);
-      res.status(200).json({ token });
-    
+
+    const user = existingUser[0];
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!isValidPassword) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Generate tokens
+    const accessToken = generateAccessToken(user.id);
+    const refreshTokenValue = generateRefreshToken();
+    const refreshTokenJWT = generateRefreshTokenJWT(refreshTokenValue, user.id);
+
+    // Save refresh token to DB
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    await db.insert(refreshTokens).values({
+      token: refreshTokenValue,
+      userId: user.id,
+      expiresAt,
+    });
+
+    logUtils(req, res, `User ${email} logged in`);
+    res.status(200).json({
+      accessToken,
+      refreshToken: refreshTokenJWT,
+    });
   } catch (error) {
     errorHandler(error, req, res);
+  }
+};
+
+export const refresh = async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) {
+    return res.status(400).json({ message: 'Refresh token is required' });
+  }
+  try {
+    // Verify refresh token JWT
+    const decoded = verifyRefreshTokenJWT(refreshToken);
+    const tokenValue = decoded.token;
+    const userId = decoded.sub;
+
+    // Check if refresh token exists in DB and is valid
+    const existingToken = await db.select().from(refreshTokens).where(
+      and(
+        eq(refreshTokens.token, tokenValue),
+        eq(refreshTokens.userId, userId),
+        gt(refreshTokens.expiresAt, new Date())
+      )
+    ).limit(1);
+
+    if (existingToken.length === 0) {
+      return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+
+    // Delete old refresh token
+    await db.delete(refreshTokens).where(eq(refreshTokens.token, tokenValue));
+
+    // Generate new tokens
+    const newAccessToken = generateAccessToken(userId);
+    const newRefreshTokenValue = generateRefreshToken();
+    const newRefreshTokenJWT = generateRefreshTokenJWT(newRefreshTokenValue, userId);
+
+    // Save new refresh token
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await db.insert(refreshTokens).values({
+      token: newRefreshTokenValue,
+      userId,
+      expiresAt,
+    });
+
+    res.status(200).json({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshTokenJWT,
+    });
+  } catch (error) {
+    res.status(401).json({ message: 'Invalid refresh token' });
+  }
+};
+
+export const logout = async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) {
+    return res.status(400).json({ message: 'Refresh token is required' });
+  }
+  try {
+    const decoded = verifyRefreshTokenJWT(refreshToken);
+    const tokenValue = decoded.token;
+
+    // Delete refresh token from DB
+    await db.delete(refreshTokens).where(eq(refreshTokens.token, tokenValue));
+
+    res.status(200).json({ message: 'Logged out successfully' });
+  } catch (error) {
+    res.status(400).json({ message: 'Invalid refresh token' });
   }
 };
 

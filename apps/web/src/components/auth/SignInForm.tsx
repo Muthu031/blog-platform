@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import api from '../../services/api';
-import useStore from '../../stores/useStore';
+import { useAuth } from '../../hooks/useAuth';
 
 const SocialButton = ({ href, children }: { href?: string; children: React.ReactNode }) => {
   const Component = href ? 'a' : 'button';
@@ -40,15 +39,14 @@ const SignInForm = ({ onSwitchToSignUp }: SignInFormProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const login = useStore((state) => state.login);
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const response = await api.post('/login', { email, password });
-      login(response.data.token);
+    const result = await login(email, password);
+    if (result.success) {
       setError('');
-    } catch (err) {
+    } else {
       setError('Invalid credentials');
     }
   };

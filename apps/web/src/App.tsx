@@ -1,10 +1,10 @@
 import Home from './pages/Home'
 import AuthPage from './components/auth/AuthPage'
 import { ThemeProvider } from './hooks/useTheme'
-import useStore from './stores/useStore'
+import { useAuth } from './hooks/useAuth'
 
 export default function App() {
-  const isAuthenticated = useStore((state) => state.isAuthenticated);
+  const { isAuthenticated } = useAuth();
 
   return (
     <ThemeProvider>

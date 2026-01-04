@@ -67,7 +67,38 @@
           "nullable": true
         }
       }
+    },
+    
+  "refresh_tokens": {
+    "fields": {
+      "id": {
+        "type": "UUID",
+        "primaryKey": true,
+        "default": "gen_random_uuid()"
+      },
+      "token": {
+        "type": "VARCHAR(500)",
+        "notNull": true,
+        "unique": true
+      },
+      "user_id": {
+        "type": "UUID",
+        "notNull": true,
+        "references": "users.id"
+      },
+      "expires_at": {
+        "type": "TIMESTAMP WITH TIME ZONE",
+        "notNull": true
+      },
+      "created_at": {
+        "type": "TIMESTAMP WITH TIME ZONE",
+        "notNull": true,
+        "default": "now()"
+      }
     }
+  
+}
+
   },
   "functions": {}
 }

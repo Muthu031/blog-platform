@@ -21,7 +21,7 @@ const SignUpForm = ({ onSwitchToSignIn }: SignUpFormProps) => {
       return;
     }
     try {
-      await api.post('/signup', { name, email, password });
+      await api.post('/auth/signup', { name, email, password });
       setSuccess('Account created successfully! Please sign in.');
       setError('');
       // Optionally switch to sign in after success

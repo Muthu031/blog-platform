@@ -1,1 +1,2 @@
-export * from './tables/users.js';
+export * from './tables/users';
+export * from './tables/refreshTokens';
