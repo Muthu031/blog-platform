@@ -41,11 +41,16 @@ const SignInForm = ({ onSwitchToSignUp }: SignInFormProps) => {
   const [error, setError] = useState('');
   const { login } = useAuth();
 
+  const Navigate = () => {
+    window.location.href = '/home';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const result = await login(email, password);
     if (result.success) {
       setError('');
+      Navigate()
     } else {
       setError('Invalid credentials');
     }

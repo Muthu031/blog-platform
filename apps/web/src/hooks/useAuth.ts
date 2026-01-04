@@ -1,17 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { decodeToken, isTokenExpired } from '../utils/auth';
+import { AuthState, LoginData } from '../types';
 
-interface AuthState {
-  userId: string | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-}
 
-interface LoginData {
-  accessToken: string;
-  refreshToken: string;
-}
 
 export const useAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
