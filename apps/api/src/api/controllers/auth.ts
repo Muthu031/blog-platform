@@ -4,13 +4,13 @@ import { eq, and, gt } from 'drizzle-orm';
 import { logUtils } from '../../utils/logUtils';
 import { errorHandler } from '../middlewares/errorHandler';
 import db from '../../services/db';
-
+import { ApiResponse } from '../../../../../packages/shared/src/types';
 import {
   generateAccessToken,
   generateRefreshToken,
   generateRefreshTokenJWT,
   verifyRefreshTokenJWT,
-  TokenPayload
+  TokenPayload,
 } from '../../utils/auth';
 import { users } from '../../database/tables/users';
 import { refreshTokens } from '../../database/tables/refreshTokens';
@@ -18,18 +18,23 @@ import { refreshTokens } from '../../database/tables/refreshTokens';
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required' });
+    return res
+      .status(400)
+      .json({ success: false, error: 'Email and password are required' } as ApiResponse);
   }
   try {
     const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
     if (existingUser.length === 0) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, error: 'Invalid credentials' } as ApiResponse);
     }
 
     const user = existingUser[0];
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     if (!isValidPassword) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials',
+      } as ApiResponse);
     }
 
     // Generate tokens
@@ -47,9 +52,13 @@ export const login = async (req: Request, res: Response) => {
 
     logUtils(req, res, `User ${email} logged in`);
     res.status(200).json({
-      accessToken,
-      refreshToken: refreshTokenJWT,
-    });
+      success: true,
+      data: {
+        accessToken,
+        refreshToken: refreshTokenJWT,
+      },
+      message: 'Login successful',
+    } as ApiResponse);
   } catch (error) {
     errorHandler(error, req, res);
   }
@@ -67,13 +76,17 @@ export const refresh = async (req: Request, res: Response) => {
     const userId = decoded.sub;
 
     // Check if refresh token exists in DB and is valid
-    const existingToken = await db.select().from(refreshTokens).where(
-      and(
-        eq(refreshTokens.token, tokenValue),
-        eq(refreshTokens.userId, userId),
-        gt(refreshTokens.expiresAt, new Date())
+    const existingToken = await db
+      .select()
+      .from(refreshTokens)
+      .where(
+        and(
+          eq(refreshTokens.token, tokenValue),
+          eq(refreshTokens.userId, userId),
+          gt(refreshTokens.expiresAt, new Date())
+        )
       )
-    ).limit(1);
+      .limit(1);
 
     if (existingToken.length === 0) {
       return res.status(401).json({ message: 'Invalid refresh token' });
@@ -125,13 +138,15 @@ export const logout = async (req: Request, res: Response) => {
 export const signup = async (req: Request, res: Response) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) {
-    return res.status(400).json({ message: 'Name, email, and password are required' });
+    return res
+      .status(400)
+      .json({ success: false, error: 'Name, email, and password are required' } as ApiResponse);
   }
   try {
     // Check if user already exists
     const existingUser = await db.select().from(users).where(eq(users.email, email));
     if (existingUser.length > 0) {
-      return res.status(409).json({ message: 'User already exists' });
+      return res.status(409).json({ success: false, error: 'User already exists' } as ApiResponse);
     }
 
     // Hash password
@@ -139,14 +154,21 @@ export const signup = async (req: Request, res: Response) => {
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     // Insert new user
-    const newUser = await db.insert(users).values({
-      name,
-      email,
-      passwordHash,
-    }).returning({ id: users.id });
+    const newUser = await db
+      .insert(users)
+      .values({
+        name,
+        email,
+        passwordHash,
+      })
+      .returning({ id: users.id });
 
     logUtils(req, res, `User ${email} signed up`);
-    res.status(201).json({ message: 'User created successfully', user: { id: newUser[0].id, name, email } });
+    res.status(201).json({
+      success: true,
+      data: { id: newUser[0].id, name, email },
+      message: 'User created successfully',
+    } as ApiResponse);
   } catch (error) {
     errorHandler(error, req, res);
   }

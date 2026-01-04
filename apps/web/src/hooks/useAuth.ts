@@ -34,23 +34,28 @@ export const useAuth = () => {
 
   const login = useCallback(async (email: string, password: string) => {
     try {
-      const response = await api.post<LoginData>('/auth/login', { email, password });
-      const { accessToken, refreshToken } = response.data;
+      const response = await api.post('/auth/login', { email, password });
+      if (response.data.success) {
+        const { accessToken, refreshToken } = response.data.data;
 
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
 
-      const decoded = decodeToken(accessToken);
-      setAuthState({
-        userId: decoded.sub,
-        isAuthenticated: true,
-        isLoading: false,
-      });
+        const decoded = decodeToken(accessToken);
+        setAuthState({
+          userId: decoded.sub,
+          isAuthenticated: true,
+          isLoading: false,
+        });
 
-      return { success: true };
-    } catch (error) {
+        return { success: true };
+      } else {
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+        return { success: false, error: response.data.error };
+      }
+    } catch (error: any) {
       setAuthState(prev => ({ ...prev, isLoading: false }));
-      return { success: false, error };
+      return { success: false, error: error.response?.data?.error || error };
     }
   }, []);
 
@@ -81,18 +86,23 @@ export const useAuth = () => {
     }
 
     try {
-      const response = await api.post<LoginData>('/auth/refresh', { refreshToken });
-      const { accessToken, refreshToken: newRefreshToken } = response.data;
+      const response = await api.post('/auth/refresh', { refreshToken });
+      if (response.data.success) {
+        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
 
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', newRefreshToken);
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', newRefreshToken);
 
-      const decoded = decodeToken(accessToken);
-      setAuthState({
-        userId: decoded.sub,
-        isAuthenticated: true,
-        isLoading: false,
-      });
+        const decoded = decodeToken(accessToken);
+        setAuthState({
+          userId: decoded.sub,
+          isAuthenticated: true,
+          isLoading: false,
+        });
+      } else {
+        // Refresh failed, logout
+        logout();
+      }
     } catch (error) {
       // Refresh failed, logout
       logout();

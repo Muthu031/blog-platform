@@ -50,7 +50,7 @@ const SignInForm = ({ onSwitchToSignUp }: SignInFormProps) => {
       setError('');
       navigate('/home');
     } else {
-      setError('Invalid credentials');
+      setError(result.error?.response?.data?.error || 'Login failed');
     }
   };
 

@@ -21,13 +21,17 @@ const SignUpForm = ({ onSwitchToSignIn }: SignUpFormProps) => {
       return;
     }
     try {
-      await api.post('/auth/signup', { name, email, password });
-      setSuccess('Account created successfully! Please sign in.');
-      setError('');
-      // Optionally switch to sign in after success
-      setTimeout(() => onSwitchToSignIn(), 2000);
-    } catch (err) {
-      setError('Registration failed');
+      const response = await api.post('/auth/signup', { name, email, password });
+      if (response.data.success) {
+        setSuccess(response.data.message || 'Account created successfully! Please sign in.');
+        setError('');
+        // Optionally switch to sign in after success
+        setTimeout(() => onSwitchToSignIn(), 2000);
+      } else {
+        setError(response.data.error || 'Registration failed');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Registration failed');
     }
   };
 
