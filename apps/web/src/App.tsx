@@ -1,20 +1,41 @@
+import { useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { ThemeProvider } from './hooks/useTheme'
+import { Routes, Route } from 'react-router-dom'
 import Home from './pages/Home'
 import AuthPage from './components/auth/AuthPage'
-import { ThemeProvider } from './hooks/useTheme'
+import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './hooks/useAuth'
-import { Routes, Route, Navigate } from 'react-router-dom'
 
-export default function App() {
+function Main() {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated === false && location.pathname === '/') {
+      navigate('/auth');
+    } else if (isAuthenticated === true && location.pathname === '/auth') {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate, location.pathname]);
 
   return (
-    <ThemeProvider>
-      <div className="min-h-screen bg-slate-50 dark:bg-gray-900">
-        <Routes>
-          <Route path="/auth" element={isAuthenticated ? <Navigate to="/home" /> : <AuthPage />} />
-          <Route path="/home" element={isAuthenticated ? <Home /> : <Navigate to="/auth" />} />
-        </Routes>
-      </div>
-    </ThemeProvider>
+    <div className="min-h-screen bg-slate-50 dark:bg-gray-900">
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/" element={<Home />} />
+      </Routes>
+    </div>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <Main />
+      </ThemeProvider>
+    </AuthProvider>
   )
 }

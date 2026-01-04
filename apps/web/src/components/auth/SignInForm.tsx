@@ -48,7 +48,8 @@ const SignInForm = ({ onSwitchToSignUp }: SignInFormProps) => {
     const result = await login(email, password);
     if (result.success) {
       setError('');
-      navigate('/home');
+      // navigate to home immediately after successful login
+      navigate('/');
     } else {
       setError(result.error?.response?.data?.error || 'Login failed');
     }

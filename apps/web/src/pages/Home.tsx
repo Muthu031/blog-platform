@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
@@ -37,6 +38,7 @@ const blogPosts = [
 export default function Home() {
   const { userId, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
   const [msg, setMsg] = useState<string>('Loading...');
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState<boolean>(true);
@@ -70,6 +72,12 @@ export default function Home() {
     fetchUser();
   }, [userId]);
 
+  const handleLogout = async () => {
+    await logout();
+    // navigate to auth page after logout
+    navigate('/auth');
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
       {/* Navigation */}
@@ -94,7 +102,7 @@ export default function Home() {
               )}
             </button>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
             >
               Logout
