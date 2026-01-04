@@ -4,3 +4,4 @@ envs
 dist
 .vscode
 logs
+error-logs

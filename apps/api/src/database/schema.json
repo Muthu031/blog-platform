@@ -1,0 +1,73 @@
+{
+  "datasource": {
+    "provider": "postgresql",
+    "url": "env(DATABASE_URL)"
+  },
+  "generator": {
+    "client": {
+      "provider": "prisma-client-js"
+    }
+  },
+  "schema": "blog",
+  "tables": {
+    "users": {
+      "fields": {
+        "id": {
+          "type": "UUID",
+          "primaryKey": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "type": "VARCHAR(100)",
+          "notNull": true
+        },
+        "email": {
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "unique": true
+        },
+        "password_hash": {
+          "type": "TEXT",
+          "notNull": true
+        },
+        "is_admin": {
+          "type": "BOOLEAN",
+          "notNull": true,
+          "default": false
+        },
+        "is_active": {
+          "type": "BOOLEAN",
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "type": "UUID",
+          "nullable": true
+        },
+        "updated_at": {
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_by": {
+          "type": "UUID",
+          "nullable": true
+        },
+        "deleted_at": {
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true
+        },
+        "deleted_by": {
+          "type": "UUID",
+          "nullable": true
+        }
+      }
+    }
+  },
+  "functions": {}
+}

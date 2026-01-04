@@ -12,6 +12,7 @@ const SignUpForm = ({ onSwitchToSignIn }: SignUpFormProps) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+ 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +21,7 @@ const SignUpForm = ({ onSwitchToSignIn }: SignUpFormProps) => {
       return;
     }
     try {
-      await api.post('/register', { name, email, password });
+      await api.post('/signup', { name, email, password });
       setSuccess('Account created successfully! Please sign in.');
       setError('');
       // Optionally switch to sign in after success
