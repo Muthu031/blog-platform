@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine      # Use PostgreSQL 15
+    container_name: projecthub-db
+    environment:
+      POSTGRES_USER: postgres       # Username
+      POSTGRES_PASSWORD: postgres   # Password
+      POSTGRES_DB: projecthub_dev   # Database name
+    ports:
+      - "5432:5432"                # Access at localhost:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Don't lose data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s                 # Check every 10 seconds
+      timeout: 5s
+      retries: 5                    # Retry 5 times
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine           # Use Redis 7
+    container_name: projecthub-redis
+    ports:
+      - "6379:6379"                # Access at localhost:6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:                    # Keep data between restarts

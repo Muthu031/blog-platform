@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",           /* Modern JavaScript */
+    "module": "commonjs",         /* How to bundle code */
+    "lib": ["ES2022"],           /* JavaScript features to use */
+    "outDir": "./dist",          /* Where to save compiled code */
+    "rootDir": "./src",          /* Where source files are */
+    "strict": true,              /* Force strict type checking */
+    "esModuleInterop": true,     /* Allow different import styles */
+    "skipLibCheck": true,        /* Skip library type checks */
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,   /* Allow importing JSON files */
+    "moduleResolution": "node",  
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]           /* @/utils means src/utils */
+    }
+  },
+  "include": ["src/**/*"],        /* Compile all TypeScript in src */
+  "exclude": ["node_modules", "dist"]
+}
