@@ -10,6 +10,9 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\""
   },
+  "_moduleAliases": {
+    "@": "dist"
+  },
   "keywords": [
     "blog",
     "platform",
@@ -30,6 +33,10 @@
     "express": "^4.18.2",
     "helmet": "^7.0.0",
     "jsonwebtoken": "^9.0.3",
+    "module-alias": "^2.3.4",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "tsconfig-paths": "^4.2.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger.config';
 
@@ -10,7 +10,6 @@ const router = Router();
  */
 router.get(
   '/',
-  swaggerUi.serve as any,
   swaggerUi.setup(swaggerSpec, {
     swaggerOptions: {
       persistAuthorization: true,
@@ -25,7 +24,7 @@ router.get(
  * JSON spec endpoint
  * Access at http://localhost:3000/api-docs/spec
  */
-router.get('/spec', (req, res) => {
+router.get('/spec', (_req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });

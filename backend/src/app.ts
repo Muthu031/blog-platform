@@ -1,12 +1,15 @@
+import 'module-alias/register';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 import authRoutes from './modules/auth/auth.routes';
 import organizationRoutes from './modules/organizations/organization.routes';
 import swaggerRoutes from './shared/swagger/swagger.routes';
 import { errorHandler } from './shared/middleware/error.middleware';
+
 
 // Load environment variables
 dotenv.config();
@@ -35,7 +38,8 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// API Documentation
+// API Documentation - Serve static files and UI
+app.use('/api-docs', swaggerUi.serve as any);
 app.use('/api-docs', swaggerRoutes);
 
 // Authentication routes
@@ -46,7 +50,6 @@ app.use('/api/organizations', organizationRoutes);
 
 // === ERROR HANDLER (must be last) ===
 app.use(errorHandler);
-
 // === START SERVER ===
 
 app.listen(PORT, () => {

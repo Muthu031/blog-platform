@@ -229,13 +229,7 @@ const options: any = {
       },
     ],
   },
-  apis: [
-    './src/modules/auth/auth.routes.ts',
-    './src/shared/swagger/auth.swagger.ts',
-    './src/modules/organizations/organization.routes.ts',
-    './src/modules/organizations/organization.swagger.ts',
-    './src/modules/organizations/invitation.routes.ts',
-  ],
+apis: ['./src/docs/**/*.ts'],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);
