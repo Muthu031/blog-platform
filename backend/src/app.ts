@@ -1,7 +1,12 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import authRoutes from './modules/auth/auth.routes';
+import organizationRoutes from './modules/organizations/organization.routes';
+import swaggerRoutes from './shared/swagger/swagger.routes';
+import { errorHandler } from './shared/middleware/error.middleware';
 
 // Load environment variables
 dotenv.config();
@@ -13,24 +18,43 @@ const PORT = process.env.PORT || 3000;
 // Middleware runs before every request
 
 app.use(helmet());              // Security headers
-app.use(cors());                // Allow cross-origin requests
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+}));                            // Allow cross-origin requests
 app.use(express.json());        // Parse JSON in request body
+app.use(cookieParser());        // Parse cookies
 
 // === ROUTES ===
 
 // Health check - is the server alive?
 app.get('/health', (req: Request, res: Response) => {
   res.json({ 
-    status: 'MULTI TENANT IS OK',
+    status: 'ok',
     timestamp: new Date().toISOString() 
   });
 });
+
+// API Documentation
+app.use('/api-docs', swaggerRoutes);
+
+// Authentication routes
+app.use('/api/auth', authRoutes);
+
+// Organization routes
+app.use('/api/organizations', organizationRoutes);
+
+// === ERROR HANDLER (must be last) ===
+app.use(errorHandler);
 
 // === START SERVER ===
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔐 Authentication: http://localhost:${PORT}/api/auth`);
+  console.log(`🏢 Organizations: http://localhost:${PORT}/api/organizations`);
+  console.log(`📚 API Docs: http://localhost:${PORT}/api-docs`);
 });
 
 export default app;
