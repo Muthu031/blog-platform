@@ -34,3 +34,5 @@ postgres_data/
 # === Temp Files ===
 tmp/
 temp/
+
+/src/generated/prisma
