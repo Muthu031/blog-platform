@@ -1,0 +1,24 @@
+
+/* Basic global styles used by the lesson UI
+	- Keep styles deliberately small and dependency-free so the lesson is easy
+	  to understand and modify. In a real project you'd use a design system
+	  or utility CSS framework (Tailwind, Bootstrap, etc.). */
+
+html, body, #root { height: 100%; }
+body { font-family: Arial, sans-serif; margin: 0; padding: 16px; }
+
+/* Header (app chrome) */
+.header { margin-bottom: 16px }
+
+/* Simple inline form layout used for creating projects */
+.create-form { display: flex; gap: 8px; margin-bottom: 16px }
+.create-form input { padding: 8px }
+.create-form button { padding: 8px 12px }
+
+/* Project list styles */
+.projects ul { list-style: none; padding: 0 }
+.projects li { padding: 8px 0; border-bottom: 1px solid #eee }
+
+/* Notes:
+	- These styles are intentionally unscoped and global.
+	- For larger apps prefer CSS Modules or CSS-in-JS to avoid collisions. */

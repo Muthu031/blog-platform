@@ -1,6 +1,12 @@
 {
+  "scripts": {
+    "dev-backend": "npm run dev --prefix backend",
+    "dev-frontend": "npm run dev --prefix frontend/web",
+    "dev": "concurrently \"npm run dev-backend\" \"npm run dev-frontend\""
+  },
   "devDependencies": {
-    "tsconfig-paths": "^4.2.0"
+    "tsconfig-paths": "^4.2.0",
+    "concurrently": "^8.2.0"
   },
   "dependencies": {
     "@types/swagger-ui-express": "^4.1.8",

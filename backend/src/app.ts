@@ -10,6 +10,7 @@ import organizationRoutes from './modules/organizations/organization.routes';
 import projectRoutes from './modules/projects/project.controller';
 import swaggerRoutes from './shared/swagger/swagger.routes';
 import { errorHandler } from './shared/middleware/error.middleware';
+import { log } from 'console';
 
 
 // Load environment variables
@@ -57,11 +58,11 @@ app.use(errorHandler);
 // === START SERVER ===
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔐 Authentication: http://localhost:${PORT}/api/auth`);
-  console.log(`🏢 Organizations: http://localhost:${PORT}/api/organizations`);
-  console.log(`📚 API Docs: http://localhost:${PORT}/api-docs`);
+  log(`🚀 Server running on http://localhost:${PORT}`);
+  log(`📊 Health check: http://localhost:${PORT}/health`);
+  log(`🔐 Authentication: http://localhost:${PORT}/api/auth`);
+  log(`🏢 Organizations: http://localhost:${PORT}/api/organizations`);
+  log(`📚 API Docs: http://localhost:${PORT}/api-docs`);
 });
 
 export default app;

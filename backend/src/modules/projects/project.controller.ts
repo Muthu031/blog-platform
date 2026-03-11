@@ -5,7 +5,17 @@ import { projectService } from './project.service';
 
 const router = Router({ mergeParams: true });
 
+/**
+ * Project routes
+ *
+ * All routes are nested under `/api/organizations/:orgId/projects` and require
+ * authentication. The `authenticate` middleware attaches `req.user` (JWT payload)
+ * so handlers can determine the acting user.
+ */
+
 // POST /api/organizations/:orgId/projects - Create project
+// Body: { name, key, description? }
+// Creates a project within the organization. Only org members may create projects.
 router.post('/', authenticate, async (req: Request, res: Response) => {
   try {
     const { name, key, description } = req.body;
@@ -14,12 +24,14 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: { message: 'Name and key required', statusCode: 400 } });
     }
 
+    // Delegate creation to the service which enforces membership checks.
     const project = await projectService.createProject(
       req.params.orgId,
       req.user!.sub,
       { name, key, description }
     );
 
+    // Return the created project object under `data` (consistent API shape).
     res.status(201).json({ success: true, data: project });
   } catch (error) {
     res.status(500).json({ success: false, error: { message: error instanceof Error ? error.message : 'Internal error', statusCode: 500 } });
@@ -27,6 +39,8 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
 });
 
 // GET /api/organizations/:orgId/projects - Get organization projects
+// GET /api/organizations/:orgId/projects - Get organization projects
+// Returns a list of projects for the organization, each including boards + columns.
 router.get('/', authenticate, async (req: Request, res: Response) => {
   try {
     const projects = await projectService.getProjectsByOrganization(req.params.orgId);
@@ -37,6 +51,8 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
 });
 
 // GET /api/organizations/:orgId/projects/:projectId - Get specific project
+// GET /api/organizations/:orgId/projects/:projectId - Get specific project
+// Returns project details including boards and columns.
 router.get('/:projectId', authenticate, async (req: Request, res: Response) => {
   try {
     const project = await projectService.getProject(req.params.projectId);
@@ -50,6 +66,8 @@ router.get('/:projectId', authenticate, async (req: Request, res: Response) => {
 });
 
 // PUT /api/organizations/:orgId/projects/:projectId - Update project
+// PUT /api/organizations/:orgId/projects/:projectId - Update project
+// Body: { name?, description? }
 router.put('/:projectId', authenticate, async (req: Request, res: Response) => {
   try {
     const { name, description } = req.body;
@@ -61,6 +79,8 @@ router.put('/:projectId', authenticate, async (req: Request, res: Response) => {
 });
 
 // DELETE /api/organizations/:orgId/projects/:projectId - Delete project
+// DELETE /api/organizations/:orgId/projects/:projectId - Delete project
+// Permanently deletes the project and its dependent records.
 router.delete('/:projectId', authenticate, async (req: Request, res: Response) => {
   try {
     await projectService.deleteProject(req.params.projectId);
@@ -71,6 +91,9 @@ router.delete('/:projectId', authenticate, async (req: Request, res: Response) =
 });
 
 // POST /api/organizations/:orgId/projects/:projectId/boards - Create board
+// POST /api/organizations/:orgId/projects/:projectId/boards - Create board
+// Body: { name, description? }
+// Creates a new board for the project and seeds default columns.
 router.post('/:projectId/boards', authenticate, async (req: Request, res: Response) => {
   try {
     const { name, description } = req.body;
@@ -82,6 +105,8 @@ router.post('/:projectId/boards', authenticate, async (req: Request, res: Respon
 });
 
 // GET /api/organizations/:orgId/projects/:projectId/boards - Get project boards
+// GET /api/organizations/:orgId/projects/:projectId/boards - Get project boards
+// Returns all boards for a project along with columns and tasks.
 router.get('/:projectId/boards', authenticate, async (req: Request, res: Response) => {
   try {
     const boards = await projectService.getBoards(req.params.projectId);
