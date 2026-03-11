@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button, Input } from '@components/ui';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Eye, EyeOff } from 'lucide-react';
 import { apiClient, ApiClient } from '@services/api';
 import { useAuthStore, useOrganizationStore } from '@store';
 import { useNotificationStore } from '@store';
@@ -29,6 +29,8 @@ export function SignupPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({ resolver: zodResolver(signupSchema) });
+
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const onSubmit = async (data: SignupFormData) => {
     try {
@@ -76,7 +78,24 @@ export function SignupPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Input label="Name" placeholder="Your name" error={errors.name?.message} {...register('name')} />
             <Input label="Email" type="email" placeholder="you@example.com" error={errors.email?.message} {...register('email')} />
-            <Input label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register('password')} />
+            <Input
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Enter your password"
+              error={errors.password?.message}
+              icon={(
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="p-1 text-gray-600"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              )}
+              iconPosition="right"
+              {...register('password')}
+            />
 
             <Button type="submit" variant="primary" fullWidth loading={isSubmitting}>
               Create account

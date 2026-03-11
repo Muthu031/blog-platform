@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button, Input } from '@components/ui';
-import { LogIn } from 'lucide-react';
+import { LogIn, Eye, EyeOff } from 'lucide-react';
 import { apiClient, ApiClient } from '@services/api';
 import { useAuthStore, useOrganizationStore } from '@store';
 import { useNotificationStore } from '@store';
@@ -25,6 +25,8 @@ export function LoginPage() {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
+
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const onSubmit = async (data: LoginFormData) => {
     try {
@@ -87,9 +89,20 @@ export function LoginPage() {
 
             <Input
               label="Password"
-              type="password"
-              placeholder="••••••••"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Enter your password"
               error={errors.password?.message}
+              icon={(
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="p-1 text-gray-600"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              )}
+              iconPosition="right"
               {...register('password')}
             />
 
