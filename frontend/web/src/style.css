@@ -1,24 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Basic global styles used by the lesson UI
-	- Keep styles deliberately small and dependency-free so the lesson is easy
-	  to understand and modify. In a real project you'd use a design system
-	  or utility CSS framework (Tailwind, Bootstrap, etc.). */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-html, body, #root { height: 100%; }
-body { font-family: Arial, sans-serif; margin: 0; padding: 16px; }
+* {
+  @apply antialiased;
+}
 
-/* Header (app chrome) */
-.header { margin-bottom: 16px }
+html,
+body,
+#root {
+  height: 100%;
+}
 
-/* Simple inline form layout used for creating projects */
-.create-form { display: flex; gap: 8px; margin-bottom: 16px }
-.create-form input { padding: 8px }
-.create-form button { padding: 8px 12px }
+body {
+  @apply font-sans bg-gray-50 text-gray-900;
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+}
 
-/* Project list styles */
-.projects ul { list-style: none; padding: 0 }
-.projects li { padding: 8px 0; border-bottom: 1px solid #eee }
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
 
-/* Notes:
-	- These styles are intentionally unscoped and global.
-	- For larger apps prefer CSS Modules or CSS-in-JS to avoid collisions. */
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-lg;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* Global utilities */
+.line-clamp-1 {
+  @apply overflow-hidden text-ellipsis whitespace-nowrap;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  @apply overflow-hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  @apply overflow-hidden;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    @apply opacity-0 translate-x-4;
+  }
+  to {
+    @apply opacity-100 translate-x-0;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    @apply opacity-0 translate-y-4;
+  }
+  to {
+    @apply opacity-100 translate-y-0;
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-slideInUp {
+  animation: slideInUp 0.3s ease-out;
+}
+
+/* Form styles */
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='number'],
+input[type='search'],
+textarea,
+select {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900;
+  @apply placeholder-gray-500 transition-colors duration-200;
+  @apply focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20;
+  @apply disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed;
+}
+
+/* Focus visible for keyboard navigation */
+:focus-visible {
+  @apply outline-2 outline-blue-500 outline-offset-2;
+}
+
+/* Transitions */
+.transition-smooth {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+/* Ensure images don't overflow */
+img {
+  @apply max-w-full h-auto;
+}

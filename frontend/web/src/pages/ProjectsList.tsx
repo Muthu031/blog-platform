@@ -36,8 +36,8 @@ export default function ProjectsList() {
     setLoading(true)
     // getProjects returns the `data` field from the API response
     getProjects(orgId)
-      .then((res) => setProjects(res || []))
-      .catch((err) => {
+      .then((res: any) => setProjects(res || []))
+      .catch((err: any) => {
         console.error('Failed to load projects', err)
       })
       .finally(() => setLoading(false))
