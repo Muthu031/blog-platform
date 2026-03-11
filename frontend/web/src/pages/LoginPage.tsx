@@ -5,6 +5,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button, Input } from '@components/ui';
 import { LogIn } from 'lucide-react';
+import { apiClient, ApiClient } from '@services/api';
+import { useAuthStore, useOrganizationStore } from '@store';
+import { useNotificationStore } from '@store';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -25,11 +28,35 @@ export function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      // API call would go here
-      console.log('Login:', data);
-      navigate('/dashboard');
+      const res = await apiClient.login(data.email, data.password);
+
+      // Attempt to extract token and user from common response shapes
+      const token = res?.access_token || res?.token || res?.accessToken || res?.data?.access_token;
+      const user = res?.user || res?.data?.user || res?.data || res;
+      const organization = res?.organization || res?.data?.organization || null;
+
+      if (!token) {
+        useNotificationStore.getState().addNotification('Login successful', 'success');
+      } else {
+        localStorage.setItem('auth_token', token);
+        useAuthStore.getState().login(user, token);
+        useNotificationStore.getState().addNotification('Logged in successfully', 'success');
+      }
+
+      if (organization) {
+        useOrganizationStore.getState().setCurrentOrganization(organization);
+        navigate(`/org/${organization.slug}`);
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       console.error('Login failed:', error);
+      try {
+        const apiErr = ApiClient.handleError(error as unknown);
+        useNotificationStore.getState().addNotification(apiErr.message || 'Login failed. Please check your credentials.', 'error');
+      } catch {
+        useNotificationStore.getState().addNotification('Login failed. Please check your credentials.', 'error');
+      }
     }
   };
 

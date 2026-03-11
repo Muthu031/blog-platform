@@ -19,7 +19,7 @@ export function Sidebar({ organizationSlug, navItems, onLogout }: SidebarProps) 
   const location = useLocation();
   const [isOpen, setIsOpen] = React.useState(true);
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/') || location.pathname.startsWith(path);
 
   return (
     <>

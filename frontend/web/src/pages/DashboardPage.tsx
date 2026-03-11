@@ -64,6 +64,13 @@ export function DashboardPage() {
     { icon: BarChart3, label: 'Tasks This Week', value: 24 },
   ];
 
+  // Minimal Jira-like board preview layout (3 columns)
+  const boardColumns = [
+    { id: 'col-1', title: 'To Do', color: 'bg-slate-200', tasks: ['Task A', 'Task B'] },
+    { id: 'col-2', title: 'In Progress', color: 'bg-amber-100', tasks: ['Task C'] },
+    { id: 'col-3', title: 'Done', color: 'bg-emerald-100', tasks: ['Task D', 'Task E', 'Task F'] },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -115,40 +122,63 @@ export function DashboardPage() {
             action={<Button variant="primary" onClick={() => navigate(`/org/${orgSlug}/new-project`)}>Create Project</Button>}
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <Card
-                key={project.id}
-                hoverable
-                className="p-6 cursor-pointer transition-all"
-                onClick={() => navigate(`/org/${orgSlug}/project/${project.id}`)}
-              >
-                <div className="flex items-start gap-4 mb-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold ${project.color}`}>
-                    {project.key.charAt(0)}
+          <div className="space-y-6">
+            {/* Project cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projects.map((project) => (
+                <Card
+                  key={project.id}
+                  hoverable
+                  className="p-6 cursor-pointer transition-all"
+                  onClick={() => navigate(`/org/${orgSlug}/project/${project.id}`)}
+                >
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold ${project.color}`}>
+                      {project.key.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">{project.name}</h3>
+                      <p className="text-xs text-gray-500">{project.key}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate">{project.name}</h3>
-                    <p className="text-xs text-gray-500">{project.key}</p>
-                  </div>
-                </div>
 
-                {project.description && (
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">{project.description}</p>
-                )}
+                  {project.description && (
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{project.description}</p>
+                  )}
 
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary" size="sm">
-                    {project.status}
-                  </Badge>
-                  <div className="flex -space-x-2">
-                    {teamMembers.slice(0, 3).map((member) => (
-                      <Avatar key={member.id} name={member.name} size="sm" />
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <Badge variant="secondary" size="sm">
+                      {project.status}
+                    </Badge>
+                    <div className="flex -space-x-2">
+                      {teamMembers.slice(0, 3).map((member) => (
+                        <Avatar key={member.id} name={member.name} size="sm" />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              ))}
+            </div>
+
+            {/* Board preview - Jira style small kanban */}
+            <div>
+              <h3 className="text-xl font-semibold mb-3">Board Preview</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {boardColumns.map((col) => (
+                  <div key={col.id} className="bg-white rounded shadow p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium">{col.title}</h4>
+                      <span className="text-sm text-gray-500">{col.tasks.length}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {col.tasks.map((t, i) => (
+                        <div key={i} className="p-2 bg-gray-50 rounded border border-gray-100">{t}</div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>

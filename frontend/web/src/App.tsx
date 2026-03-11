@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { LoginPage } from '@pages/LoginPage';
+import { SignupPage } from '@pages/SignupPage';
 import { DashboardPage } from '@pages/DashboardPage';
 import { ProjectsListPage } from '@pages/ProjectsListPage';
 import { BoardPage } from '@pages/BoardPage';
@@ -88,7 +89,7 @@ export default function App() {
         <Routes>
           {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
 
           {/* Protected Routes */}
           <Route

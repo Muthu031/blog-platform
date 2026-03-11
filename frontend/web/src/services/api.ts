@@ -39,12 +39,14 @@ export class ApiClient {
   // Auth endpoints
   async login(email: string, password: string) {
     const response = await this.client.post('/auth/login', { email, password });
-    return response.data;
+    // backend wraps payload: { success: true, data: { ... } }
+    return response.data?.data ?? response.data;
   }
 
   async signup(email: string, password: string, name: string) {
-    const response = await this.client.post('/auth/signup', { email, password, name });
-    return response.data;
+    // backend route is POST /auth/register
+    const response = await this.client.post('/auth/register', { email, password, name });
+    return response.data?.data ?? response.data;
   }
 
   async forgotPassword(email: string) {
