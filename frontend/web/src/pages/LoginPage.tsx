@@ -37,11 +37,11 @@ export function LoginPage() {
       const user = res?.user || res?.data?.user || res?.data || res;
       const organization = res?.organization || res?.data?.organization || null;
 
-      if (!token) {
-        useNotificationStore.getState().addNotification('Login successful', 'success');
-      } else {
-        localStorage.setItem('auth_token', token);
-        useAuthStore.getState().login(user, token);
+      // Ensure we set auth state even if the API response doesn't include a token
+      if (user) {
+        const t = token ?? '';
+        if (t) localStorage.setItem('auth_token', t);
+        useAuthStore.getState().login(user, t);
         useNotificationStore.getState().addNotification('Logged in successfully', 'success');
       }
 

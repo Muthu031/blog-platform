@@ -146,6 +146,9 @@ export default function App() {
             }
           />
 
+          {/* Legacy /dashboard route redirect for convenience */}
+          <Route path="/dashboard" element={<Navigate to={`/org/${mockOrganization.slug}`} replace />} />
+
           {/* Default Route */}
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
