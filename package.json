@@ -2,7 +2,7 @@
   "scripts": {
     "dev-backend": "npm run dev --prefix backend",
     "dev-frontend": "npm run dev --prefix frontend/web",
-    "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix \"[{name}]\" --prefix-colors \"blue.bold,green.bold\" --timestamp-format \"HH:mm:ss\" \"npm run dev-backend\" \"npm run dev-frontend\"",
+    "dev": "concurrently --raw \"node ./scripts/prefix.js BACKEND npm --prefix backend run dev\" \"node ./scripts/prefix.js FRONTEND npm --prefix frontend/web run dev\"",
     "build-backend": "npm run build --prefix backend",
     "build-frontend": "npm run build --prefix frontend/web",
     "build": "concurrently --names \"BUILD-BACKEND,BUILD-FRONTEND\" --prefix \"[{name}]\" --prefix-colors \"magenta.bold,cyan.bold\" --timestamp-format \"HH:mm:ss\" \"npm run build-backend\" \"npm run build-frontend\""
