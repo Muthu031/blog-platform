@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import authRoutes from './modules/auth/auth.routes';
 import organizationRoutes from './modules/organizations/organization.routes';
+import projectRoutes from './modules/projects/project.controller';
 import swaggerRoutes from './shared/swagger/swagger.routes';
 import { errorHandler } from './shared/middleware/error.middleware';
 
@@ -47,6 +48,9 @@ app.use('/api/auth', authRoutes);
 
 // Organization routes
 app.use('/api/organizations', organizationRoutes);
+
+// Project routes (nested under organizations)
+app.use('/api/organizations/:orgId/projects', projectRoutes);
 
 // === ERROR HANDLER (must be last) ===
 app.use(errorHandler);

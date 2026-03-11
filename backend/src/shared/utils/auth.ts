@@ -1,5 +1,6 @@
 import jwt, { SignOptions, VerifyOptions } from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { UnauthorizedError } from './errors';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret';
@@ -57,7 +58,7 @@ export function verifyAccessToken(token: string): JWTPayload {
     const options: VerifyOptions = {};
     return jwt.verify(token, JWT_SECRET as string, options) as JWTPayload;
   } catch (error) {
-    throw new Error('Invalid or expired token');
+    throw new UnauthorizedError('Invalid or expired access token');
   }
 }
 
@@ -69,7 +70,7 @@ export function verifyRefreshToken(token: string): JWTPayload {
     const options: VerifyOptions = {};
     return jwt.verify(token, JWT_REFRESH_SECRET as string, options) as JWTPayload;
   } catch (error) {
-    throw new Error('Invalid or expired refresh token');
+    throw new UnauthorizedError('Invalid or expired refresh token');
   }
 }
 

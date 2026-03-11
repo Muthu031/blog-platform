@@ -97,8 +97,17 @@
  *     summary: Get current user profile
  *     tags:
  *       - Authentication
+ *     description: Retrieve the current authenticated user's profile information
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: Authorization
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: "JWT Bearer token. Format: Bearer <your_access_token>"
+ *         example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *     responses:
  *       200:
  *         description: User profile retrieved successfully
@@ -111,15 +120,36 @@
  *                   type: boolean
  *                 data:
  *                   type: object
+ *       401:
+ *         description: Unauthorized - Missing or invalid Authorization token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *
  * /api/auth/logout:
  *   post:
  *     summary: Logout user
  *     tags:
  *       - Authentication
+ *     description: Logout the current user by invalidating their session
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: Authorization
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: "JWT Bearer token. Format: Bearer <your_access_token>"
+ *         example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *     responses:
  *       200:
  *         description: Logged out successfully
+ *       401:
+ *         description: Unauthorized - Missing or invalid Authorization token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
