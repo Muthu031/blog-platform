@@ -1,4 +1,4 @@
-public class ReverseArray {
+class ReverseArray {
     public static void reverse(int[] arr) {
         if (arr == null) return;
         int i = 0, j = arr.length - 1;

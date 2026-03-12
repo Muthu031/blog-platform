@@ -5,3 +5,18 @@ dist
 .vscode
 logs
 error-logs
+#
+# Ignore Java compiled class files
+*.class
+
+# Optional Java build folders
+bin/
+build/
+
+# IDE files
+*.iml
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

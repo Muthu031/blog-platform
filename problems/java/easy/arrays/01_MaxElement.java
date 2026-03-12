@@ -1,4 +1,4 @@
-public class MaxElement {
+class MaxElement {
     public static int maxElement(int[] arr) {
         if (arr == null || arr.length == 0) return Integer.MIN_VALUE;
         int max = arr[0];

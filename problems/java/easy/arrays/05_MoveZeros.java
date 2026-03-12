@@ -1,4 +1,4 @@
-public class MoveZeros {
+class MoveZeros {
     public static void moveZeros(int[] arr) {
         if (arr == null) return;
         int j = 0;

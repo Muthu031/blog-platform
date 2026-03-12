@@ -49,3 +49,5 @@ cd problems/java/easy/arrays
 javac 02_ReverseArray.java && java ReverseArray
 ```
 
+example:
+cd problems/java/easy/arrays; javac 05_MoveZeros.java; if ($LASTEXITCODE -eq 0) { java MoveZeros }
