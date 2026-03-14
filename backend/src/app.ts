@@ -9,6 +9,7 @@ import authRoutes from './modules/auth/auth.routes';
 import organizationRoutes from './modules/organizations/organization.routes';
 import projectRoutes from './modules/projects/project.controller';
 import swaggerRoutes from './shared/swagger/swagger.routes';
+import taskRoutes from './modules/tasks/task.controller';
 import { errorHandler } from './shared/middleware/error.middleware';
 import { log } from 'console';
 
@@ -52,6 +53,9 @@ app.use('/api/organizations', organizationRoutes);
 
 // Project routes (nested under organizations)
 app.use('/api/organizations/:orgId/projects', projectRoutes);
+
+// Task routes (nested under projects)
+app.use('/api/organizations/:orgId/projects', taskRoutes);
 
 // === ERROR HANDLER (must be last) ===
 app.use(errorHandler);
