@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { authenticate } from '@/shared/middleware/auth.middleware';
+import { requirePasswordResetCompleted } from '@/shared/middleware/first-login.middleware';
+import { requireTenant, requireTenantMember } from '@/shared/middleware/tenant.middleware';
 import { organizationService } from './organization.service';
 import { invitationService } from './invitation.service';
 import {
@@ -16,10 +18,12 @@ import prisma from '@/config/database';
 
 const router = Router();
 
+// All organization routes require auth + password reset completion.
+router.use(authenticate, requirePasswordResetCompleted);
+
 // POST /api/organizations - Create new organization
 router.post(
   '/',
-  authenticate,
   async (req: Request, res: Response): Promise<any> => {
     try {
       const validatedData = createOrganizationSchema.parse(req.body);
@@ -71,7 +75,6 @@ router.post(
 // GET /api/organizations - Get user's organizations
 router.get(
   '/',
-  authenticate,
   async (req: Request, res: Response): Promise<any> => {
     try {
       const organizations = await organizationService.getOrganizationsByUser(req.user!.sub);
@@ -95,26 +98,11 @@ router.get(
 // GET /api/organizations/:id - Get specific organization
 router.get(
   '/:id',
-  authenticate,
+  requireTenant,
+  requireTenantMember,
   async (req: Request, res: Response): Promise<any> => {
     try {
-      // Check if user has access to this organization
-      const access = await organizationService.checkUserOrganizationAccess(
-        req.user!.sub,
-        req.params.id
-      );
-
-      if (!access) {
-        return res.status(403).json({
-          success: false,
-          error: {
-            message: 'Access denied',
-            statusCode: 403
-          }
-        });
-      }
-
-      const organization = await organizationService.getOrganization(req.params.id);
+      const organization = await organizationService.getOrganization(req.tenant!.id);
 
       if (!organization) {
         return res.status(404).json({
@@ -142,21 +130,50 @@ router.get(
   }
 );
 
+// GET /api/organizations/:id/members - List organization members
+router.get(
+  '/:id/members',
+  requireTenant,
+  requireTenantMember,
+  async (req: Request, res: Response): Promise<any> => {
+    try {
+      const members = await prisma.organizationMember.findMany({
+        where: { organizationId: req.tenant!.id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+        },
+        orderBy: { joinedAt: 'desc' },
+      });
+
+      res.json({ success: true, data: members });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: {
+          message: error instanceof Error ? error.message : 'Internal server error',
+          statusCode: 500,
+        },
+      });
+    }
+  }
+);
+
 // PUT /api/organizations/:id - Update organization
 router.put(
   '/:id',
-  authenticate,
+  requireTenant,
+  requireTenantMember,
   async (req: Request, res: Response): Promise<any> => {
     try {
       // Check if user is owner
-      const member = await prisma.organizationMember.findFirst({
-        where: {
-          organizationId: req.params.id,
-          userId: req.user!.sub
-        }
-      });
-
-      if (!member || member.role !== 'owner') {
+      if (req.tenantRole !== 'owner') {
         return res.status(403).json({
           success: false,
           error: {
@@ -169,7 +186,7 @@ router.put(
       const validatedData = updateOrganizationSchema.parse(req.body);
 
       const organization = await organizationService.updateOrganization(
-        req.params.id,
+        req.tenant!.id,
         validatedData
       );
 
@@ -203,18 +220,12 @@ router.put(
 // DELETE /api/organizations/:id - Delete organization
 router.delete(
   '/:id',
-  authenticate,
+  requireTenant,
+  requireTenantMember,
   async (req: Request, res: Response): Promise<any> => {
     try {
       // Check if user is owner
-      const member = await prisma.organizationMember.findFirst({
-        where: {
-          organizationId: req.params.id,
-          userId: req.user!.sub
-        }
-      });
-
-      if (!member || member.role !== 'owner') {
+      if (req.tenantRole !== 'owner') {
         return res.status(403).json({
           success: false,
           error: {
@@ -224,7 +235,7 @@ router.delete(
         });
       }
 
-      await organizationService.deleteOrganization(req.params.id);
+      await organizationService.deleteOrganization(req.tenant!.id);
 
       res.status(204).send();
     } catch (error) {
@@ -242,18 +253,12 @@ router.delete(
 // PUT /api/organizations/:id/members/:userId/role - Update member role
 router.put(
   '/:id/members/:userId/role',
-  authenticate,
+  requireTenant,
+  requireTenantMember,
   async (req: Request, res: Response): Promise<any> => {
     try {
       // Check if user is admin or owner
-      const member = await prisma.organizationMember.findFirst({
-        where: {
-          organizationId: req.params.id,
-          userId: req.user!.sub
-        }
-      });
-
-      if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
+      if (!req.tenantRole || (req.tenantRole !== 'admin' && req.tenantRole !== 'owner')) {
         return res.status(403).json({
           success: false,
           error: {
@@ -268,7 +273,7 @@ router.put(
       const updatedMember = await prisma.organizationMember.update({
         where: {
           organizationId_userId: {
-            organizationId: req.params.id,
+            organizationId: req.tenant!.id,
             userId: req.params.userId
           }
         },
@@ -315,18 +320,12 @@ router.put(
 // DELETE /api/organizations/:id/members/:userId - Remove member
 router.delete(
   '/:id/members/:userId',
-  authenticate,
+  requireTenant,
+  requireTenantMember,
   async (req: Request, res: Response): Promise<any> => {
     try {
       // Check if user is admin or owner
-      const member = await prisma.organizationMember.findFirst({
-        where: {
-          organizationId: req.params.id,
-          userId: req.user!.sub
-        }
-      });
-
-      if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
+      if (!req.tenantRole || (req.tenantRole !== 'admin' && req.tenantRole !== 'owner')) {
         return res.status(403).json({
           success: false,
           error: {
@@ -337,7 +336,7 @@ router.delete(
       }
 
       // Prevent removing the last owner
-      if (member.role === 'owner' && req.params.userId === member.userId) {
+      if (req.tenantRole === 'owner' && req.params.userId === req.user!.sub) {
         return res.status(400).json({
           success: false,
           error: {
@@ -350,7 +349,7 @@ router.delete(
       await prisma.organizationMember.delete({
         where: {
           organizationId_userId: {
-            organizationId: req.params.id,
+            organizationId: req.tenant!.id,
             userId: req.params.userId
           }
         }
@@ -374,18 +373,12 @@ router.delete(
 // POST /api/organizations/:id/invitations - Create invitation
 router.post(
   '/:id/invitations',
-  authenticate,
+  requireTenant,
+  requireTenantMember,
   async (req: Request, res: Response): Promise<any> => {
     try {
       // Check if user is admin or owner
-      const member = await prisma.organizationMember.findFirst({
-        where: {
-          organizationId: req.params.id,
-          userId: req.user!.sub
-        }
-      });
-
-      if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
+      if (!req.tenantRole || (req.tenantRole !== 'admin' && req.tenantRole !== 'owner')) {
         return res.status(403).json({
           success: false,
           error: {
@@ -398,7 +391,7 @@ router.post(
       const validatedData = createInvitationSchema.parse(req.body);
 
       const invitation = await invitationService.createInvitation(
-        req.params.id,
+        req.tenant!.id,
         validatedData.email,
         validatedData.role,
         req.user!.sub
@@ -434,18 +427,12 @@ router.post(
 // GET /api/organizations/:id/invitations - Get organization invitations
 router.get(
   '/:id/invitations',
-  authenticate,
+  requireTenant,
+  requireTenantMember,
   async (req: Request, res: Response): Promise<any> => {
     try {
       // Check if user is admin or owner
-      const member = await prisma.organizationMember.findFirst({
-        where: {
-          organizationId: req.params.id,
-          userId: req.user!.sub
-        }
-      });
-
-      if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
+      if (!req.tenantRole || (req.tenantRole !== 'admin' && req.tenantRole !== 'owner')) {
         return res.status(403).json({
           success: false,
           error: {
@@ -456,7 +443,7 @@ router.get(
       }
 
       const invitations = await invitationService.getOrganizationInvitations(
-        req.params.id
+        req.tenant!.id
       );
 
       res.json({
@@ -478,18 +465,12 @@ router.get(
 // DELETE /api/organizations/:id/invitations/:invitationId - Revoke invitation
 router.delete(
   '/:id/invitations/:invitationId',
-  authenticate,
+  requireTenant,
+  requireTenantMember,
   async (req: Request, res: Response): Promise<any> => {
     try {
       // Check if user is admin or owner
-      const member = await prisma.organizationMember.findFirst({
-        where: {
-          organizationId: req.params.id,
-          userId: req.user!.sub
-        }
-      });
-
-      if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
+      if (!req.tenantRole || (req.tenantRole !== 'admin' && req.tenantRole !== 'owner')) {
         return res.status(403).json({
           success: false,
           error: {

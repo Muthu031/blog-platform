@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { User, Organization, Project, Task } from '@types';
+import toast from 'react-hot-toast';
 
 interface AuthState {
   user: User | null;
@@ -9,6 +10,7 @@ interface AuthState {
   login: (user: User, token: string) => void;
   logout: () => void;
   setUser: (user: User) => void;
+  setToken: (token: string | null) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -18,9 +20,20 @@ export const useAuthStore = create<AuthState>()(
         user: null,
         token: null,
         isAuthenticated: false,
-        login: (user, token) => set({ user, token, isAuthenticated: true }),
-        logout: () => set({ user: null, token: null, isAuthenticated: false }),
+        login: (user, token) => {
+          if (token) localStorage.setItem('auth_token', token);
+          set({ user, token, isAuthenticated: true });
+        },
+        logout: () => {
+          localStorage.removeItem('auth_token');
+          set({ user: null, token: null, isAuthenticated: false });
+        },
         setUser: (user) => set({ user }),
+        setToken: (token) => {
+          if (token) localStorage.setItem('auth_token', token);
+          else localStorage.removeItem('auth_token');
+          set({ token, isAuthenticated: Boolean(token) });
+        },
       }),
       {
         name: 'auth-store',
@@ -35,6 +48,7 @@ interface OrganizationState {
   setCurrentOrganization: (org: Organization) => void;
   setOrganizations: (orgs: Organization[]) => void;
   addOrganization: (org: Organization) => void;
+  clear: () => void;
 }
 
 export const useOrganizationStore = create<OrganizationState>()(
@@ -46,6 +60,7 @@ export const useOrganizationStore = create<OrganizationState>()(
         setCurrentOrganization: (org) => set({ currentOrganization: org }),
         setOrganizations: (orgs) => set({ organizations: orgs }),
         addOrganization: (org) => set((state) => ({ organizations: [...state.organizations, org] })),
+        clear: () => set({ currentOrganization: null, organizations: [] }),
       }),
       {
         name: 'organization-store',
@@ -135,9 +150,9 @@ interface NotificationState {
   notifications: Array<{
     id: string;
     message: string;
-    type: 'success' | 'error' | 'info' | 'warning';
+    type: 'success' | 'error' | 'warning' | 'invalid' | 'system' | 'info';
   }>;
-  addNotification: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+  addNotification: (message: string, type: 'success' | 'error' | 'warning' | 'invalid' | 'system' | 'info') => void;
   removeNotification: (id: string) => void;
 }
 
@@ -145,6 +160,30 @@ export const useNotificationStore = create<NotificationState>()((set) => ({
   notifications: [],
   addNotification: (message, type) => {
     const id = Math.random().toString(36).substring(7);
+
+    // Primary UX surface: toast notifications.
+    switch (type) {
+      case 'success':
+        toast.success(message);
+        break;
+      case 'warning':
+        toast(message, { icon: '!' });
+        break;
+      case 'invalid':
+        toast.error(message);
+        break;
+      case 'system':
+        toast.error(message);
+        break;
+      case 'info':
+        toast(message);
+        break;
+      case 'error':
+      default:
+        toast.error(message);
+        break;
+    }
+
     set((state) => ({
       notifications: [...state.notifications, { id, message, type }],
     }));

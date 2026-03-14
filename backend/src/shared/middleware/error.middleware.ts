@@ -15,6 +15,7 @@ export const errorHandler: ErrorRequestHandler = (
       error: {
         message: err.message,
         statusCode: err.statusCode,
+        code: err.code,
       },
     });
   }

@@ -1,160 +1,238 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
-import { Toaster } from 'react-hot-toast';
-import { LoginPage } from '@pages/LoginPage';
-import { SignupPage } from '@pages/SignupPage';
-import { DashboardPage } from '@pages/DashboardPage';
-import { ProjectsListPage } from '@pages/ProjectsListPage';
-import { BoardPage } from '@pages/BoardPage';
-import { AppLayout } from '@layout/AppLayout';
-import { useAuthStore, useOrganizationStore } from '@store';
 import {
-  Home,
-  FolderOpen,
-  LayoutGrid,
-  Settings,
-  Users,
-} from 'lucide-react';
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+  useLocation,
+  useParams,
+  useNavigate,
+} from 'react-router-dom';
+import { QueryClientProvider, QueryClient, useQuery } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
+import {
+  LoginPage,
+  SignupPage,
+  DashboardPage,
+  ProjectsListPage,
+  BoardPage,
+  ResetPasswordPage,
+  OrganizationSelectPage,
+  SettingsPage,
+} from '@pages';
+import { AppLayout } from '@layout/AppLayout';
+import { useAuthStore, useOrganizationStore, useNotificationStore } from '@store';
+import { apiClient } from '@services/api';
+import { Home, FolderOpen } from 'lucide-react';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 1,
+      staleTime: 1000 * 60 * 5,
+      retry: false,
     },
   },
 });
 
-// Protected route component
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+function FullScreenLoader({ label = 'Loading...' }: { label?: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-sm text-gray-600">{label}</div>
+    </div>
+  );
+}
 
-  if (!isAuthenticated) {
+function RequireAuth({
+  children,
+  allowPasswordReset = false,
+}: {
+  children: React.ReactNode;
+  allowPasswordReset?: boolean;
+}) {
+  const location = useLocation();
+  const token = useAuthStore((s) => s.token) || localStorage.getItem('auth_token');
+  const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
+  const setToken = useAuthStore((s) => s.setToken);
+  const logout = useAuthStore((s) => s.logout);
+
+  React.useEffect(() => {
+    if (token && !useAuthStore.getState().token) {
+      setToken(token);
+    }
+  }, [setToken, token]);
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: () => apiClient.me(),
+    enabled: Boolean(token),
+  });
+
+  React.useEffect(() => {
+    if (data) setUser(data);
+  }, [data, setUser]);
+
+  if (!token) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (isLoading) {
+    return <FullScreenLoader label="Verifying session..." />;
+  }
+
+  if (isError) {
+    logout();
+    useOrganizationStore.getState().clear();
+    return <Navigate to="/login" replace />;
+  }
+
+  const firstLoginRequired = Boolean((user as any)?.firstLoginRequired ?? (data as any)?.firstLoginRequired);
+  if (firstLoginRequired && !allowPasswordReset) {
+    return <Navigate to="/reset-password" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function RequireTenant({ children }: { children: React.ReactNode }) {
+  const { orgSlug } = useParams();
+  const setOrganizations = useOrganizationStore((s) => s.setOrganizations);
+  const setCurrentOrganization = useOrganizationStore((s) => s.setCurrentOrganization);
+  const logout = useAuthStore((s) => s.logout);
+
+  const { data: organizations = [], isLoading, isError } = useQuery({
+    queryKey: ['organizations'],
+    queryFn: () => apiClient.getOrganizations(),
+  });
+
+  React.useEffect(() => {
+    setOrganizations(organizations);
+    const current = organizations.find((o: any) => o.slug === orgSlug);
+    if (current) setCurrentOrganization(current);
+  }, [organizations, orgSlug, setOrganizations, setCurrentOrganization]);
+
+  if (isLoading) {
+    return <FullScreenLoader label="Loading tenant..." />;
+  }
+
+  if (isError) {
+    logout();
+    useOrganizationStore.getState().clear();
+    return <Navigate to="/login" replace />;
+  }
+
+  const current = organizations.find((o: any) => o.slug === orgSlug);
+  if (!current) {
+    useNotificationStore.getState().addNotification('Access denied', 'error');
+    logout();
+    useOrganizationStore.getState().clear();
     return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
 }
 
-export default function App() {
-  const user = useAuthStore((state) => state.user);
-  const organization = useOrganizationStore((state) => state.currentOrganization);
+function OrgShell() {
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const organization = useOrganizationStore((s) => s.currentOrganization);
+  const organizations = useOrganizationStore((s) => s.organizations);
 
-  // Mock organization for demo
-  const mockOrganization = organization || {
-    id: '1',
-    name: 'Acme Corp',
-    slug: 'acme-corp',
-    description: 'A leading software company',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+  if (!user || !organization) return <FullScreenLoader />;
 
-  // Mock user for demo
-  const mockUser = user || {
-    id: '1',
-    email: 'john@example.com',
-    name: 'John Doe',
-    role: 'user' as const,
-    createdAt: new Date().toISOString(),
-  };
-
-  const navigationItems = [
+  const navItems = [
     {
       label: 'Dashboard',
-      path: `/org/${mockOrganization.slug}`,
+      path: `/org/${organization.slug}`,
       icon: <Home size={20} />,
     },
     {
       label: 'Projects',
-      path: `/org/${mockOrganization.slug}/projects`,
+      path: `/org/${organization.slug}/projects`,
       icon: <FolderOpen size={20} />,
-    },
-    {
-      label: 'Board',
-      path: `/org/${mockOrganization.slug}/project/1/board`,
-      icon: <LayoutGrid size={20} />,
-    },
-    {
-      label: 'Team',
-      path: `/org/${mockOrganization.slug}/team`,
-      icon: <Users size={20} />,
     },
   ];
 
   return (
+    <AppLayout
+      user={user as any}
+      organization={organization as any}
+      organizations={organizations as any}
+      navItems={navItems}
+      onOrganizationChange={(org) => {
+        useOrganizationStore.getState().setCurrentOrganization(org);
+        navigate(`/org/${org.slug}`);
+      }}
+      onLogout={async () => {
+        try {
+          await apiClient.logout();
+        } catch {
+          // ignore
+        }
+        useAuthStore.getState().logout();
+        useOrganizationStore.getState().clear();
+        navigate('/login');
+      }}
+    >
+      <Outlet />
+    </AppLayout>
+  );
+}
+
+function IndexRedirect() {
+  const token = useAuthStore((s) => s.token) || localStorage.getItem('auth_token');
+  return <Navigate to={token ? '/org/select' : '/login'} replace />;
+}
+
+export default function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <Router>
         <Routes>
-          {/* Auth Routes */}
+          <Route path="/" element={<IndexRedirect />} />
+
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
-          {/* Protected Routes */}
+          <Route
+            path="/reset-password"
+            element={
+              <RequireAuth allowPasswordReset>
+                <ResetPasswordPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/org/select"
+            element={
+              <RequireAuth>
+                <OrganizationSelectPage />
+              </RequireAuth>
+            }
+          />
+
           <Route
             path="/org/:orgSlug"
             element={
-              <ProtectedRoute>
-                <AppLayout
-                  user={mockUser}
-                  organization={mockOrganization}
-                  navItems={navigationItems}
-                  onLogout={() => {
-                    // Handle logout
-                  }}
-                >
-                  <DashboardPage />
-                </AppLayout>
-              </ProtectedRoute>
+              <RequireAuth>
+                <RequireTenant>
+                  <OrgShell />
+                </RequireTenant>
+              </RequireAuth>
             }
-          />
+          >
+            <Route index element={<DashboardPage />} />
+            <Route path="projects" element={<ProjectsListPage />} />
+            <Route path="project/:projectId/board" element={<BoardPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
 
-          <Route
-            path="/org/:orgSlug/projects"
-            element={
-              <ProtectedRoute>
-                <AppLayout
-                  user={mockUser}
-                  organization={mockOrganization}
-                  navItems={navigationItems}
-                  onLogout={() => {
-                    // Handle logout
-                  }}
-                >
-                  <ProjectsListPage />
-                </AppLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/org/:orgSlug/project/:projectId/board"
-            element={
-              <ProtectedRoute>
-                <AppLayout
-                  user={mockUser}
-                  organization={mockOrganization}
-                  navItems={navigationItems}
-                  onLogout={() => {
-                    // Handle logout
-                  }}
-                >
-                  <BoardPage />
-                </AppLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Legacy /dashboard route redirect for convenience */}
-          <Route path="/dashboard" element={<Navigate to={`/org/${mockOrganization.slug}`} replace />} />
-
-          {/* Default Route */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
 
-      {/* Notifications */}
       <Toaster position="top-right" />
     </QueryClientProvider>
   );

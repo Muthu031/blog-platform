@@ -118,7 +118,7 @@ export function Header({
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              <Avatar name={user.name} avatar={user.avatar} size="sm" />
+              <Avatar name={user.name} avatar={(user as any).avatarUrl || user.avatar} size="sm" />
               <ChevronDown size={16} className="text-gray-500" />
             </button>
 

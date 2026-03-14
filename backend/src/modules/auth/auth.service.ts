@@ -5,12 +5,14 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from '@/shared/utils/auth';
+import { generateTemporaryPassword } from '@/shared/utils/password';
+import { sendEmail } from '@/shared/services/email.service';
 import {
   ConflictError,
   UnauthorizedError,
   NotFoundError,
 } from '@/shared/utils/errors';
-import { RegisterInput, LoginInput } from './auth.validation';
+import { RegisterInput, LoginInput, ChangePasswordInput } from './auth.validation';
 
 export class AuthService {
   /**
@@ -26,8 +28,9 @@ export class AuthService {
       throw new ConflictError('User with this email already exists');
     }
 
-    // Hash password
-    const passwordHash = await hashPassword(data.password);
+    // Generate and hash a temporary password. User must reset on first login.
+    const temporaryPassword = generateTemporaryPassword();
+    const passwordHash = await hashPassword(temporaryPassword);
 
     // Create user
     const user = await prisma.user.create({
@@ -35,6 +38,7 @@ export class AuthService {
         email: data.email,
         passwordHash,
         name: data.name,
+        firstLoginRequired: true,
       },
       select: {
         id: true,
@@ -42,25 +46,28 @@ export class AuthService {
         name: true,
         avatarUrl: true,
         emailVerified: true,
+        firstLoginRequired: true,
         createdAt: true,
       },
     });
 
-    // Generate tokens
-    const accessToken = generateAccessToken({
-      sub: user.id,
-      email: user.email,
-    });
-
-    const refreshToken = generateRefreshToken({
-      sub: user.id,
-      email: user.email,
+    // Send temp password via email. In dev/no SMTP config, this logs instead.
+    await sendEmail({
+      to: user.email,
+      subject: 'Your temporary password',
+      text: [
+        `Hi ${user.name},`,
+        '',
+        'Your account has been created. Use the temporary password below to sign in:',
+        '',
+        temporaryPassword,
+        '',
+        'You will be required to reset your password after your first login.',
+      ].join('\n'),
     });
 
     return {
       user,
-      accessToken,
-      refreshToken,
     };
   }
 
@@ -116,6 +123,7 @@ export class AuthService {
         name: user.name,
         avatarUrl: user.avatarUrl,
         emailVerified: user.emailVerified,
+        firstLoginRequired: user.firstLoginRequired,
       },
       organization: orgMember?.organization,
       role: orgMember?.role,
@@ -174,6 +182,7 @@ export class AuthService {
         name: true,
         avatarUrl: true,
         emailVerified: true,
+        firstLoginRequired: true,
         createdAt: true,
         organizationMembers: {
           include: {
@@ -188,5 +197,68 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  /**
+   * Change password for the currently authenticated user.
+   *
+   * This clears the `firstLoginRequired` flag and returns fresh tokens so the
+   * client can continue seamlessly without logging in again.
+   */
+  async changePassword(userId: string, data: ChangePasswordInput) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    const isPasswordValid = await verifyPassword(data.currentPassword, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedError('Current password is incorrect');
+    }
+
+    const newHash = await hashPassword(data.newPassword);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: newHash,
+        firstLoginRequired: false,
+      },
+    });
+
+    const orgMember = await prisma.organizationMember.findFirst({
+      where: { userId: user.id },
+      include: { organization: true },
+    });
+
+    const accessToken = generateAccessToken({
+      sub: user.id,
+      email: user.email,
+      organizationId: orgMember?.organizationId,
+      role: orgMember?.role,
+    });
+
+    const refreshToken = generateRefreshToken({
+      sub: user.id,
+      email: user.email,
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+        emailVerified: user.emailVerified,
+        firstLoginRequired: false,
+      },
+      organization: orgMember?.organization,
+      role: orgMember?.role,
+      accessToken,
+      refreshToken,
+    };
   }
 }

@@ -6,12 +6,11 @@ import * as z from 'zod';
 import { Button, Input } from '@components/ui';
 import { LogIn, Eye, EyeOff } from 'lucide-react';
 import { apiClient, ApiClient } from '@services/api';
-import { useAuthStore, useOrganizationStore } from '@store';
-import { useNotificationStore } from '@store';
+import { useAuthStore, useOrganizationStore, useNotificationStore } from '@store';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -22,9 +21,7 @@ export function LoginPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  });
+  } = useForm<LoginFormData>({ resolver: zodResolver(loginSchema) });
 
   const [showPassword, setShowPassword] = React.useState(false);
 
@@ -32,40 +29,43 @@ export function LoginPage() {
     try {
       const res = await apiClient.login(data.email, data.password);
 
-      // Attempt to extract token and user from common response shapes
-      const token = res?.access_token || res?.token || res?.accessToken || res?.data?.access_token;
-      const user = res?.user || res?.data?.user || res?.data || res;
+      const token = res?.accessToken || res?.access_token || res?.token;
+      const user = res?.user || res?.data?.user;
       const organization = res?.organization || res?.data?.organization || null;
 
-      // Ensure we set auth state even if the API response doesn't include a token
-      if (user) {
-        const t = token ?? '';
-        if (t) localStorage.setItem('auth_token', t);
-        useAuthStore.getState().login(user, t);
-        useNotificationStore.getState().addNotification('Logged in successfully', 'success');
+      if (user && token) {
+        useAuthStore.getState().login(user, token);
       }
 
       if (organization) {
         useOrganizationStore.getState().setCurrentOrganization(organization);
-        navigate(`/org/${organization.slug}`);
-      } else {
-        navigate('/');
       }
+
+      useNotificationStore.getState().addNotification('Logged in successfully', 'success');
+
+      if (user?.firstLoginRequired) {
+        navigate('/reset-password');
+        return;
+      }
+
+      if (organization?.slug) {
+        navigate(`/org/${organization.slug}`);
+        return;
+      }
+
+      navigate('/org/select');
     } catch (error) {
       console.error('Login failed:', error);
-      try {
-        const apiErr = ApiClient.handleError(error as unknown);
-        useNotificationStore.getState().addNotification(apiErr.message || 'Login failed. Please check your credentials.', 'error');
-      } catch {
-        useNotificationStore.getState().addNotification('Login failed. Please check your credentials.', 'error');
-      }
+      const apiErr = ApiClient.handleError(error as unknown);
+      useNotificationStore
+        .getState()
+        .addNotification(apiErr.message || 'Login failed. Please try again.', 'error');
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="mb-8 text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-4">
             <LogIn className="w-8 h-8 text-white" />
@@ -74,7 +74,6 @@ export function LoginPage() {
           <p className="text-gray-600 mt-2">Manage projects with ease</p>
         </div>
 
-        {/* Form Card */}
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Welcome back</h2>
 
@@ -107,7 +106,7 @@ export function LoginPage() {
             />
 
             <Button type="submit" variant="primary" fullWidth loading={isSubmitting}>
-              Sign In
+              Sign in
             </Button>
           </form>
 
@@ -119,11 +118,11 @@ export function LoginPage() {
           </p>
         </div>
 
-        {/* Footer */}
         <p className="text-center text-sm text-gray-600 mt-8">
-          © 2024 ProjectPal. All rights reserved.
+          (c) 2024 ProjectPal. All rights reserved.
         </p>
       </div>
     </div>
   );
 }
+

@@ -82,3 +82,22 @@ Expected response:
   "timestamp": "2026-03-02T12:00:00.000Z"
 }
 ```
+
+
+few database migration and seeding scripts to get you started.
+
+docker-compose up -d postgres
+
+cd backend
+npx prisma migrate dev
+npx prisma db seed
+
+npm run dev
+
+
+If you prefer “apply existing migrations only” (no prompts), use:
+
+cd backend
+npx prisma migrate deploy
+npx prisma generate
+

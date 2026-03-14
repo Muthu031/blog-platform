@@ -3,14 +3,19 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  avatarUrl?: string | null;
   avatar?: string;
-  role: 'user' | 'admin';
-  createdAt: string;
+  emailVerified?: boolean;
+  firstLoginRequired?: boolean;
+  role?: string;
+  createdAt?: string;
 }
 
 export interface AuthResponse {
-  access_token: string;
+  accessToken: string;
   user: User;
+  organization?: Organization | null;
+  role?: OrganizationRole;
 }
 
 export interface LoginRequest {
@@ -20,7 +25,6 @@ export interface LoginRequest {
 
 export interface SignupRequest {
   email: string;
-  password: string;
   name: string;
 }
 

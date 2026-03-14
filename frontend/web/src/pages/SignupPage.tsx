@@ -4,20 +4,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button, Input } from '@components/ui';
-import { UserPlus, Eye, EyeOff } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { apiClient, ApiClient } from '@services/api';
-import { useAuthStore, useOrganizationStore } from '@store';
 import { useNotificationStore } from '@store';
 
 const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
 });
 
 type SignupFormData = z.infer<typeof signupSchema>;
@@ -30,34 +23,25 @@ export function SignupPage() {
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({ resolver: zodResolver(signupSchema) });
 
-  const [showPassword, setShowPassword] = React.useState(false);
-
   const onSubmit = async (data: SignupFormData) => {
     try {
-      const res = await apiClient.signup(data.email, data.password, data.name);
-
-      const token = res?.access_token || res?.token || res?.accessToken || res?.data?.access_token;
-      const user = res?.user || res?.data?.user || res?.data || res;
-
-      if (token) {
-        localStorage.setItem('auth_token', token);
-        useAuthStore.getState().login(user, token);
-        useNotificationStore.getState().addNotification('Account created and logged in', 'success');
-      } else {
-        useNotificationStore.getState().addNotification('Account created — please sign in', 'success');
-      }
-
-      const organization = res?.organization || res?.data?.organization || null;
-      if (organization) {
-        useOrganizationStore.getState().setCurrentOrganization(organization);
-        navigate(`/org/${organization.slug}`);
-      } else {
-        navigate('/');
-      }
+      await apiClient.register(data.email, data.name);
+      useNotificationStore
+        .getState()
+        .addNotification(
+          'Account created. Check your email for a temporary password.',
+          'success'
+        );
+      navigate('/login');
     } catch (error) {
       console.error('Signup failed:', error);
-      const apiErr = (typeof error === 'object' && error !== null && 'response' in error) ? (ApiClient.handleError(error) as any) : null;
-      useNotificationStore.getState().addNotification(apiErr?.message || 'Signup failed. Try again.', 'error');
+      const apiErr =
+        typeof error === 'object' && error !== null && 'response' in error
+          ? (ApiClient.handleError(error) as any)
+          : null;
+      useNotificationStore
+        .getState()
+        .addNotification(apiErr?.message || 'Signup failed. Try again.', 'error');
     }
   };
 
@@ -76,25 +60,18 @@ export function SignupPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Sign up</h2>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input label="Name" placeholder="Your name" error={errors.name?.message} {...register('name')} />
-            <Input label="Email" type="email" placeholder="you@example.com" error={errors.email?.message} {...register('email')} />
             <Input
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Enter your password"
-              error={errors.password?.message}
-              icon={(
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((s) => !s)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="p-1 text-gray-600"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              )}
-              iconPosition="right"
-              {...register('password')}
+              label="Name"
+              placeholder="Your name"
+              error={errors.name?.message}
+              {...register('name')}
+            />
+            <Input
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              error={errors.email?.message}
+              {...register('email')}
             />
 
             <Button type="submit" variant="primary" fullWidth loading={isSubmitting}>
@@ -102,16 +79,27 @@ export function SignupPage() {
             </Button>
           </form>
 
+          <p className="text-xs text-gray-500 mt-4">
+            We will email you a temporary password. You will be required to reset it
+            after your first login.
+          </p>
+
           <p className="text-center text-sm text-gray-600 mt-6">
             Already have an account?{' '}
-            <button onClick={() => navigate('/login')} className="text-blue-600 hover:underline">
+            <button
+              onClick={() => navigate('/login')}
+              className="text-blue-600 hover:underline"
+            >
               Sign in
             </button>
           </p>
         </div>
 
-        <p className="text-center text-sm text-gray-600 mt-8">© 2024 ProjectPal. All rights reserved.</p>
+        <p className="text-center text-sm text-gray-600 mt-8">
+          (c) 2024 ProjectPal. All rights reserved.
+        </p>
       </div>
     </div>
   );
 }
+

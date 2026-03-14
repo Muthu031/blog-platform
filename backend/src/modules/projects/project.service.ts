@@ -1,4 +1,5 @@
 import prisma from '@/config/database';
+import { ForbiddenError, NotFoundError } from '@/shared/utils/errors';
 
 /**
  * ProjectService
@@ -30,7 +31,7 @@ export class ProjectService {
 
     if (!member) {
       // Caller should handle this error and convert to 403/validation as needed.
-      throw new Error('User is not a member of this organization');
+      throw new ForbiddenError('Access denied', 'TENANT_ACCESS_DENIED');
     }
 
     // Create the project record with a reference to the creating user.
@@ -59,34 +60,68 @@ export class ProjectService {
     });
   }
 
-  async getProject(projectId: string) {
-    // Fetch a single project by id with nested boards + columns.
-    return prisma.project.findUnique({
-      where: { id: projectId },
+  async getProject(projectId: string, organizationId: string) {
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, organizationId },
       include: {
         boards: {
           include: { columns: true }
         }
       }
     });
+
+    if (!project) {
+      throw new NotFoundError('Project not found', 'PROJECT_NOT_FOUND');
+    }
+
+    return project;
   }
 
-  async updateProject(projectId: string, data: Partial<{ name: string; description: string }>) {
-    // Update project metadata (name, description). This does not change boards/tasks.
+  async updateProject(
+    projectId: string,
+    organizationId: string,
+    data: Partial<{ name: string; description: string }>
+  ) {
+    const existing = await prisma.project.findFirst({
+      where: { id: projectId, organizationId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Project not found', 'PROJECT_NOT_FOUND');
+    }
+
     return prisma.project.update({
       where: { id: projectId },
       data
     });
   }
 
-  async deleteProject(projectId: string) {
-    // Permanently deletes the project and cascades to related boards/columns/tasks
+  async deleteProject(projectId: string, organizationId: string) {
+    const existing = await prisma.project.findFirst({
+      where: { id: projectId, organizationId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Project not found', 'PROJECT_NOT_FOUND');
+    }
+
     return prisma.project.delete({
       where: { id: projectId }
     });
   }
 
-  async createBoard(projectId: string, data: { name: string; description?: string }) {
+  async createBoard(projectId: string, organizationId: string, data: { name: string; description?: string }) {
+    const existing = await prisma.project.findFirst({
+      where: { id: projectId, organizationId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Project not found', 'PROJECT_NOT_FOUND');
+    }
+
     // Create a board and seed it with three default columns for a Kanban workflow.
     // The default columns are created with explicit positions so the frontend
     // can render them in order.
@@ -107,7 +142,16 @@ export class ProjectService {
     });
   }
 
-  async getBoards(projectId: string) {
+  async getBoards(projectId: string, organizationId: string) {
+    const existing = await prisma.project.findFirst({
+      where: { id: projectId, organizationId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Project not found', 'PROJECT_NOT_FOUND');
+    }
+
     // Return all boards for a project including each column and their tasks.
     // Boards are ordered by position to preserve UI order.
     return prisma.board.findMany({

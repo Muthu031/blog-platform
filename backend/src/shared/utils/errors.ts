@@ -1,40 +1,50 @@
 export class AppError extends Error {
+  public code?: string;
+
   constructor(
     public statusCode: number,
     public message: string,
-    public isOperational = true
+    public isOperational = true,
+    code?: string
   ) {
     super(message);
-    Object.setPrototypeOf(this, AppError.prototype);
+    this.code = code;
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
 export class BadRequestError extends AppError {
-  constructor(message = 'Bad Request') {
-    super(400, message);
+  constructor(message = 'Bad Request', code?: string) {
+    super(400, message, true, code);
   }
 }
 
 export class UnauthorizedError extends AppError {
-  constructor(message = 'Unauthorized') {
-    super(401, message);
+  constructor(message = 'Unauthorized', code?: string) {
+    super(401, message, true, code);
   }
 }
 
 export class ForbiddenError extends AppError {
-  constructor(message = 'Forbidden') {
-    super(403, message);
+  constructor(message = 'Forbidden', code?: string) {
+    super(403, message, true, code);
   }
 }
 
 export class NotFoundError extends AppError {
-  constructor(message = 'Not Found') {
-    super(404, message);
+  constructor(message = 'Not Found', code?: string) {
+    super(404, message, true, code);
   }
 }
 
 export class ConflictError extends AppError {
-  constructor(message = 'Conflict') {
-    super(409, message);
+  constructor(message = 'Conflict', code?: string) {
+    super(409, message, true, code);
+  }
+}
+
+export class PreconditionRequiredError extends AppError {
+  constructor(message = 'Precondition Required', code?: string) {
+    super(428, message, true, code);
   }
 }

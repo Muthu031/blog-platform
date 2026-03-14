@@ -1,4 +1,5 @@
 import prisma from '@/config/database';
+import { NotFoundError } from '@/shared/utils/errors';
 
 /**
  * TaskService
@@ -12,11 +13,39 @@ import prisma from '@/config/database';
  * - `assignTask` and `unassignTask` handle user assignment
  */
 export class TaskService {
-  async createTask(columnId: string, projectId: string, userId: string, data: {
+  private async requireProjectInOrg(projectId: string, organizationId: string) {
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, organizationId },
+      select: { id: true },
+    });
+
+    if (!project) {
+      throw new NotFoundError('Project not found', 'PROJECT_NOT_FOUND');
+    }
+  }
+
+  private async requireColumnInProject(columnId: string, projectId: string) {
+    const column = await prisma.column.findFirst({
+      where: {
+        id: columnId,
+        board: { projectId },
+      },
+      select: { id: true },
+    });
+
+    if (!column) {
+      throw new NotFoundError('Column not found', 'COLUMN_NOT_FOUND');
+    }
+  }
+
+  async createTask(organizationId: string, projectId: string, columnId: string, userId: string, data: {
     title: string;
     description?: string;
     assignedTo?: string;
   }) {
+    await this.requireProjectInOrg(projectId, organizationId);
+    await this.requireColumnInProject(columnId, projectId);
+
     // Get highest task number in project
     const lastTask = await prisma.task.findFirst({
       where: { projectId },
@@ -40,30 +69,52 @@ export class TaskService {
     });
   }
 
-  async getTasks(columnId: string) {
+  async getTasks(organizationId: string, projectId: string, columnId: string) {
+    await this.requireProjectInOrg(projectId, organizationId);
+    await this.requireColumnInProject(columnId, projectId);
+
     return prisma.task.findMany({
-      where: { columnId },
+      where: { columnId, projectId },
       include: { assignee: true },
       orderBy: { position: 'asc' }
     });
   }
 
-  async getTask(taskId: string) {
-    return prisma.task.findUnique({
-      where: { id: taskId },
+  async getTask(organizationId: string, projectId: string, taskId: string) {
+    await this.requireProjectInOrg(projectId, organizationId);
+
+    const task = await prisma.task.findFirst({
+      where: { id: taskId, projectId },
       include: {
         assignee: true,
         column: true,
         comments: true
       }
     });
+
+    if (!task) {
+      throw new NotFoundError('Task not found', 'TASK_NOT_FOUND');
+    }
+
+    return task;
   }
 
-  async updateTask(taskId: string, data: Partial<{
+  async updateTask(organizationId: string, projectId: string, taskId: string, data: Partial<{
     title: string;
     description: string;
     assignedTo: string;
   }>) {
+    await this.requireProjectInOrg(projectId, organizationId);
+
+    const existing = await prisma.task.findFirst({
+      where: { id: taskId, projectId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Task not found', 'TASK_NOT_FOUND');
+    }
+
     return prisma.task.update({
       where: { id: taskId },
       data,
@@ -71,7 +122,19 @@ export class TaskService {
     });
   }
 
-  async moveTask(taskId: string, columnId: string, position: number) {
+  async moveTask(organizationId: string, projectId: string, taskId: string, columnId: string, position: number) {
+    await this.requireProjectInOrg(projectId, organizationId);
+    await this.requireColumnInProject(columnId, projectId);
+
+    const existing = await prisma.task.findFirst({
+      where: { id: taskId, projectId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Task not found', 'TASK_NOT_FOUND');
+    }
+
     return prisma.task.update({
       where: { id: taskId },
       data: {
@@ -82,13 +145,35 @@ export class TaskService {
     });
   }
 
-  async deleteTask(taskId: string) {
+  async deleteTask(organizationId: string, projectId: string, taskId: string) {
+    await this.requireProjectInOrg(projectId, organizationId);
+
+    const existing = await prisma.task.findFirst({
+      where: { id: taskId, projectId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Task not found', 'TASK_NOT_FOUND');
+    }
+
     return prisma.task.delete({
       where: { id: taskId }
     });
   }
 
-  async assignTask(taskId: string, userId: string) {
+  async assignTask(organizationId: string, projectId: string, taskId: string, userId: string) {
+    await this.requireProjectInOrg(projectId, organizationId);
+
+    const existing = await prisma.task.findFirst({
+      where: { id: taskId, projectId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Task not found', 'TASK_NOT_FOUND');
+    }
+
     return prisma.task.update({
       where: { id: taskId },
       data: { assignedTo: userId },
@@ -96,7 +181,18 @@ export class TaskService {
     });
   }
 
-  async unassignTask(taskId: string) {
+  async unassignTask(organizationId: string, projectId: string, taskId: string) {
+    await this.requireProjectInOrg(projectId, organizationId);
+
+    const existing = await prisma.task.findFirst({
+      where: { id: taskId, projectId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Task not found', 'TASK_NOT_FOUND');
+    }
+
     return prisma.task.update({
       where: { id: taskId },
       data: { assignedTo: null },

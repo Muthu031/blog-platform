@@ -1,80 +1,128 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { Plus, Filter, Search } from 'lucide-react';
-import { Button, Card, Badge, Avatar, Input, Modal, Spinner } from '@components/ui';
+import { Plus, Search } from 'lucide-react';
+import { Button, Badge, Avatar, Input, Modal, Card } from '@components/ui';
 import { cn } from '@utils';
+import { apiClient, ApiClient } from '@services/api';
+import { useNotificationStore } from '@store';
 
-interface Task {
-  id: string;
-  title: string;
-  key: string;
-  priority: string;
-  assignee?: string;
-  dueDate?: string;
-}
-
-interface Column {
+type BoardColumn = {
   id: string;
   name: string;
-  type: string;
-  tasks: Task[];
-}
-
-const COLUMNS: Column[] = [
-  {
-    id: 'todo',
-    name: 'To Do',
-    type: 'todo',
-    tasks: [
-      { id: '1', title: 'Design new homepage layout', key: 'WR-1', priority: 'high', assignee: 'Sarah' },
-      { id: '2', title: 'Create brand guidelines document', key: 'WR-2', priority: 'medium' },
-    ],
-  },
-  {
-    id: 'in-progress',
-    name: 'In Progress',
-    type: 'in-progress',
-    tasks: [
-      { id: '3', title: 'Implement responsive design', key: 'WR-3', priority: 'high', assignee: 'Mike' },
-      { id: '4', title: 'Setup analytics tracking', key: 'WR-4', priority: 'low', assignee: 'Jane' },
-    ],
-  },
-  {
-    id: 'done',
-    name: 'Done',
-    type: 'done',
-    tasks: [
-      { id: '5', title: 'Setup project repository', key: 'WR-5', priority: 'medium', assignee: 'Alex' },
-    ],
-  },
-];
+  position: number;
+  tasks: Array<any>;
+};
 
 export function BoardPage() {
+  const queryClient = useQueryClient();
   const { projectId, orgSlug } = useParams();
-  const [columns, setColumns] = React.useState(COLUMNS);
-  const [showNewTaskModal, setShowNewTaskModal] = React.useState(false);
-  const [selectedColumnForNewTask, setSelectedColumnForNewTask] = React.useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [columns, setColumns] = React.useState<BoardColumn[]>([]);
+  const [activeColumnId, setActiveColumnId] = React.useState<string | null>(null);
+  const [showNewTaskModal, setShowNewTaskModal] = React.useState(false);
+  const [newTaskTitle, setNewTaskTitle] = React.useState('');
+  const [newTaskDescription, setNewTaskDescription] = React.useState('');
+
+  const { data: project } = useQuery({
+    queryKey: ['project', orgSlug, projectId],
+    queryFn: () => apiClient.getProject(orgSlug as string, projectId as string),
+    enabled: Boolean(orgSlug && projectId),
+  });
+
+  const {
+    data: boards = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['boards', orgSlug, projectId],
+    queryFn: () => apiClient.getBoards(orgSlug as string, projectId as string),
+    enabled: Boolean(orgSlug && projectId),
+  });
+
+  const activeBoard = boards[0];
+
+  React.useEffect(() => {
+    const cols = (activeBoard?.columns || [])
+      .slice()
+      .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
+      .map((c: any) => ({
+        ...c,
+        tasks: (c.tasks || []).slice().sort((t1: any, t2: any) => (t1.position ?? 0) - (t2.position ?? 0)),
+      }));
+    setColumns(cols);
+  }, [activeBoard?.id]);
+
+  const createBoard = useMutation({
+    mutationFn: () => apiClient.createBoard(orgSlug as string, projectId as string, { name: 'Main Board' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['boards', orgSlug, projectId] });
+      useNotificationStore.getState().addNotification('Board created', 'success');
+    },
+    onError: (err) => {
+      const apiErr = ApiClient.handleError(err as unknown);
+      useNotificationStore.getState().addNotification(apiErr.message || 'Failed to create board', 'error');
+    },
+  });
+
+  const createTask = useMutation({
+    mutationFn: (data: { columnId: string; title: string; description?: string }) =>
+      apiClient.createTask(orgSlug as string, projectId as string, data.columnId, {
+        title: data.title,
+        description: data.description,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['boards', orgSlug, projectId] });
+      useNotificationStore.getState().addNotification('Task created', 'success');
+      setShowNewTaskModal(false);
+      setNewTaskTitle('');
+      setNewTaskDescription('');
+      setActiveColumnId(null);
+    },
+    onError: (err) => {
+      const apiErr = ApiClient.handleError(err as unknown);
+      useNotificationStore.getState().addNotification(apiErr.message || 'Failed to create task', 'error');
+    },
+  });
+
+  const moveTask = useMutation({
+    mutationFn: (data: { taskId: string; columnId: string; position: number }) =>
+      apiClient.moveTask(orgSlug as string, projectId as string, data.taskId, data.columnId, data.position),
+    onError: (err) => {
+      const apiErr = ApiClient.handleError(err as unknown);
+      useNotificationStore.getState().addNotification(apiErr.message || 'Failed to move task', 'warning');
+      queryClient.invalidateQueries({ queryKey: ['boards', orgSlug, projectId] });
+    },
+  });
+
+  const filteredColumns = columns.map((col) => ({
+    ...col,
+    tasks: (col.tasks || []).filter((t: any) =>
+      searchQuery ? String(t.title || '').toLowerCase().includes(searchQuery.toLowerCase()) : true
+    ),
+  }));
 
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
-
     if (!destination) return;
 
-    if (source.droppableId === destination.droppableId && source.index === destination.index) {
-      return;
-    }
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    setColumns((prevColumns) => {
-      const newColumns = JSON.parse(JSON.stringify(prevColumns));
-      const sourceColumn = newColumns.find((col: Column) => col.id === source.droppableId);
-      const destColumn = newColumns.find((col: Column) => col.id === destination.droppableId);
+    setColumns((prev) => {
+      const next = prev.map((c) => ({ ...c, tasks: [...(c.tasks || [])] }));
+      const sourceCol = next.find((c) => c.id === source.droppableId);
+      const destCol = next.find((c) => c.id === destination.droppableId);
+      if (!sourceCol || !destCol) return prev;
 
-      const [movedTask] = sourceColumn.tasks.splice(source.index, 1);
-      destColumn.tasks.splice(destination.index, 0, movedTask);
+      const [moved] = sourceCol.tasks.splice(source.index, 1);
+      destCol.tasks.splice(destination.index, 0, moved);
 
-      return newColumns;
+      // Optimistic move request. Backend persists columnId + position.
+      moveTask.mutate({ taskId: draggableId, columnId: destination.droppableId, position: destination.index });
+
+      return next;
     });
   };
 
@@ -89,22 +137,37 @@ export function BoardPage() {
     return colors[priority] || colors.none;
   };
 
+  if (isLoading) {
+    return <Card className="p-6 text-gray-500">Loading board...</Card>;
+  }
+
+  if (isError) {
+    return <Card className="p-6 text-gray-500">Failed to load board.</Card>;
+  }
+
+  if (!activeBoard) {
+    return (
+      <Card className="p-8 space-y-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">No boards yet</h1>
+          <p className="text-gray-600 mt-1">Create a board to start tracking tasks.</p>
+        </div>
+        <Button variant="primary" onClick={() => createBoard.mutate()} loading={createBoard.isPending}>
+          Create board
+        </Button>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6 h-full">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Board</h1>
-          <p className="text-gray-600 mt-1">Manage project tasks and track progress</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" icon={<Filter size={18} />}>
-            Filter
-          </Button>
+          <p className="text-gray-600 mt-1">{project?.name || 'Project board'}</p>
         </div>
       </div>
 
-      {/* Search */}
       <Input
         placeholder="Search tasks..."
         icon={<Search size={18} />}
@@ -113,12 +176,10 @@ export function BoardPage() {
         className="max-w-xs"
       />
 
-      {/* Kanban Board */}
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex gap-6 overflow-x-auto pb-4">
-          {columns.map((column) => (
+          {filteredColumns.map((column) => (
             <div key={column.id} className="flex-shrink-0 w-96">
-              {/* Column Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <h2 className="font-semibold text-gray-900">{column.name}</h2>
@@ -128,16 +189,16 @@ export function BoardPage() {
                 </div>
                 <button
                   onClick={() => {
-                    setSelectedColumnForNewTask(column.id);
+                    setActiveColumnId(column.id);
                     setShowNewTaskModal(true);
                   }}
                   className="p-1 hover:bg-gray-100 rounded transition-colors"
+                  aria-label="Create task"
                 >
                   <Plus size={18} className="text-gray-600" />
                 </button>
               </div>
 
-              {/* Tasks */}
               <Droppable droppableId={column.id}>
                 {(provided, snapshot) => (
                   <div
@@ -148,7 +209,7 @@ export function BoardPage() {
                       snapshot.isDraggingOver && 'bg-blue-50'
                     )}
                   >
-                    {column.tasks.map((task, index) => (
+                    {column.tasks.map((task: any, index: number) => (
                       <Draggable key={task.id} draggableId={task.id} index={index}>
                         {(provided, snapshot) => (
                           <div
@@ -160,18 +221,16 @@ export function BoardPage() {
                               snapshot.isDragging && 'shadow-lg opacity-50'
                             )}
                           >
-                            {/* Task Key and Title */}
-                            <p className="text-xs font-semibold text-gray-500 mb-1">{task.key}</p>
+                            <p className="text-xs font-semibold text-gray-500 mb-1">
+                              {project?.key ? `${project.key}-${task.taskNumber}` : task.taskNumber}
+                            </p>
                             <p className="text-sm font-medium text-gray-900 mb-3">{task.title}</p>
 
-                            {/* Priority and Assignee */}
                             <div className="flex items-center justify-between gap-2">
                               <Badge size="sm" className={getPriorityColor(task.priority)}>
                                 {task.priority}
                               </Badge>
-                              {task.assignee && (
-                                <Avatar name={task.assignee} size="sm" />
-                              )}
+                              {task.assignee?.name && <Avatar name={task.assignee.name} size="sm" />}
                             </div>
                           </div>
                         )}
@@ -192,34 +251,54 @@ export function BoardPage() {
         </div>
       </DragDropContext>
 
-      {/* New Task Modal */}
       <Modal
         isOpen={showNewTaskModal}
         onClose={() => setShowNewTaskModal(false)}
-        title="Create New Task"
+        title="Create new task"
         description="Add a new task to the board"
         size="md"
       >
         <div className="space-y-4">
-          <input
-            type="text"
-            placeholder="Task title"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <Input
+            label="Title"
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
           />
-          <textarea
-            placeholder="Description (optional)"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows={3}
-          />
-          <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option>Select priority...</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="critical">Critical</option>
-          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              value={newTaskDescription}
+              onChange={(e) => setNewTaskDescription(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowNewTaskModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              loading={createTask.isPending}
+              onClick={() => {
+                if (!activeColumnId) return;
+                if (!newTaskTitle.trim()) {
+                  useNotificationStore.getState().addNotification('Title is required', 'invalid');
+                  return;
+                }
+                createTask.mutate({
+                  columnId: activeColumnId,
+                  title: newTaskTitle.trim(),
+                  description: newTaskDescription.trim() || undefined,
+                });
+              }}
+            >
+              Create
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>
   );
 }
+

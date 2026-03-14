@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from './auth.service';
-import { registerSchema, loginSchema } from './auth.validation';
+import { registerSchema, loginSchema, changePasswordSchema } from './auth.validation';
 import { ZodError } from 'zod';
 import { BadRequestError } from '@/shared/utils/errors';
 
@@ -22,20 +22,12 @@ export async function register(
     // Register user
     const result = await authService.register(data);
 
-    // Set refresh token as httpOnly cookie
-    res.cookie('refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
     res.status(201).json({
       success: true,
       data: {
         user: result.user,
-        accessToken: result.accessToken,
       },
+      message: 'Account created. A temporary password has been sent to your email.',
     });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -147,4 +139,45 @@ export async function logout(req: Request, res: Response) {
     success: true,
     message: 'Logged out successfully',
   });
+}
+
+/**
+ * Change password (including first-login reset)
+ * POST /auth/change-password
+ */
+export async function changePassword(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const data = changePasswordSchema.parse(req.body);
+    const userId = req.user!.sub;
+
+    const result = await authService.changePassword(userId, data);
+
+    // Rotate refresh token (httpOnly cookie)
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.json({
+      success: true,
+      data: {
+        user: result.user,
+        organization: result.organization,
+        role: result.role,
+        accessToken: result.accessToken,
+      },
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      next(new BadRequestError(error.issues[0].message));
+    } else {
+      next(error);
+    }
+  }
 }
