@@ -52,7 +52,8 @@ export class AuthService {
     });
 
     // Send temp password via email. In dev/no SMTP config, this logs instead.
-    await sendEmail({
+    console.log('[auth] User created, about to send email to:', user.email);
+    const emailResult = await sendEmail({
       to: user.email,
       subject: 'Your temporary password',
       text: [
@@ -65,6 +66,11 @@ export class AuthService {
         'You will be required to reset your password after your first login.',
       ].join('\n'),
     });
+
+    console.log('[auth] Email result:', emailResult);
+    if (!emailResult.delivered) {
+      console.warn(`[auth] Failed to send verification email to ${user.email} - SMTP not configured or delivery failed`);
+    }
 
     return {
       user,

@@ -6,7 +6,7 @@ A complete project management and blogging platform built with:
 - **Real-time**: Socket.io
 - **Cache**: Redis
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Node.js 18+
@@ -15,23 +15,25 @@ A complete project management and blogging platform built with:
 
 ### Setup
 
-1. **Start databases:**
+1. Start Docker services (Postgres, Redis, Mailpit):
    ```bash
    docker-compose up -d
    ```
 
-2. **Install backend dependencies:**
+   Mailpit (dev email inbox) UI: `http://localhost:8025`
+
+2. Install backend dependencies:
    ```bash
    cd backend
    npm install
    ```
 
-3. **Start development server:**
+3. Start development server:
    ```bash
    npm run dev
    ```
 
-4. **Test it:**
+4. Test it:
    ```bash
    curl http://localhost:3000/health
    ```
@@ -48,26 +50,45 @@ npm run format     # Auto-fix formatting
 npm run build      # Compile TypeScript
 npm start          # Run compiled code
 
-# Database
+# Docker
 docker-compose up -d      # Start Docker services
 docker-compose down       # Stop Docker services
 docker-compose logs       # View logs
 ```
 
-## 📁 Project Structure
+## Email (Temporary Password)
+
+New account creation emails a temporary password to the user, and the user is forced to reset their password after first login.
+
+For local development, this repo includes Mailpit (SMTP inbox) via Docker:
+- SMTP: `localhost:1025`
+- Inbox UI: `http://localhost:8025`
+
+Backend config lives in `backend/.env`:
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_FROM`
+- `SMTP_USER` (optional)
+- `SMTP_PASS` (optional)
+
+To send real emails instead of Mailpit, point `SMTP_*` to your real SMTP provider (Gmail/SendGrid/Mailgun/etc) and set `SMTP_USER`/`SMTP_PASS`.
+
+## Project Structure
 
 ```
 backend/
-├── src/
-│   ├── modules/           # Feature code organized by domain
-│   ├── shared/            # Reusable code
-│   ├── config/            # Configuration
-│   └── app.ts             # Main Express app
-├── dist/                  # Compiled JavaScript (generated)
-└── package.json           # Dependencies
+|-- src/                 # TypeScript source
+|   |-- modules/         # Feature code organized by domain
+|   |-- shared/          # Reusable code
+|   |-- config/          # Configuration
+|   `-- app.ts           # Main Express app
+|-- prisma/              # Prisma schema/migrations/seed
+|-- dist/                # Compiled JavaScript (generated)
+`-- package.json         # Backend dependencies
 ```
 
-## 🧑‍💻 First Request
+## First Request
 
 Your server should now respond to requests:
 
@@ -83,21 +104,22 @@ Expected response:
 }
 ```
 
+## Database Migrations / Seeding
 
-few database migration and seeding scripts to get you started.
+Apply migrations and seed your local Docker Postgres:
 
+```bash
 docker-compose up -d postgres
-
 cd backend
 npx prisma migrate dev
 npx prisma db seed
+```
 
-npm run dev
+If you prefer "apply existing migrations only" (no prompts), use:
 
-
-If you prefer “apply existing migrations only” (no prompts), use:
-
+```bash
 cd backend
 npx prisma migrate deploy
 npx prisma generate
+```
 

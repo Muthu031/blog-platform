@@ -21,6 +21,7 @@ function hasSmtpConfig() {
  * - In prod, configure SMTP_* env vars and install `nodemailer`.
  */
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+  console.log('[email] sendEmail called with to:', input.to);
   if (!hasSmtpConfig()) {
     console.warn('[email] SMTP not configured; printing email to logs.');
     console.info('[email] To:', input.to);
@@ -53,14 +54,22 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
       : undefined,
   });
 
-  await transport.sendMail({
-    from: process.env.SMTP_FROM,
-    to: input.to,
-    subject: input.subject,
-    text: input.text,
-    html: input.html,
-  });
-
-  return { delivered: true };
+  try {
+    await transport.sendMail({
+      from: process.env.SMTP_FROM,
+      to: input.to,
+      subject: input.subject,
+      text: input.text,
+      html: input.html,
+    });
+    console.log('[Email] Email sent successfully to', input.to);
+    return { delivered: true };
+  } catch (err) {
+    console.error('[Email] Failed to send email:', err);
+    console.info('[Email] To:', input.to);
+    console.info('[Email] Subject:', input.subject);
+    console.info('[Email] Text:', input.text);
+    return { delivered: false };
+  }
 }
 
